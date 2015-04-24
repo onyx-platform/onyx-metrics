@@ -1,4 +1,4 @@
-(ns onyx-metrics.core
+(ns onyx.metrics.throughput
   (:require [rotating-seq.core :as rsc]))
 
 (def r (rsc/create-r-seq 60000 20000))
