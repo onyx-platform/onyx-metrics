@@ -7,7 +7,8 @@
         interval (:onyx.metrics.throughput/interval-ms lifecycle)
         r-seq {:throughput (rsc/create-r-seq retention interval)}
         state (or (:onyx.metrics/state event) (atom {}))]
-    {:onyx.metrics/state (swap! state assoc r-seq)
+    (swap! state assoc :throughput r-seq)
+    {:onyx.metrics/state state
      :onyx.metrics/fut (future
                          (try
                            (loop []
@@ -25,17 +26,3 @@
 (defn post [event lifecycle]
   (future-cancel (:onyx.metrics/fut event))
   {})
-
-[{:lifecycle/task :all
-  :lifecycle/pre :onyx.metrics.throughput/pre
-  :lifecycle/post-batch :onyx.metrics.throughput/post-batch
-  :lifecycle/post :onyx.metrics.throughput/post
-  :onyx.metrics.throughput/retention-ms 60000
-  :onyx.metrics.throughput/interval-ms 1000
-  :lifecycle/doc "Instruments a tasks throughput metrics"}
-
- {:lifecycle/task :all
-  :lifecycle/pre :onyx.metrics.timbre/pre
-  :lifecycle/post :onyx.metrics.timbre/post
-  :onyx.metrics.throughput/interval-ms 5000
-  :lifecycle/doc "Prints task metrics to Timbre every 5000 ms"}]
