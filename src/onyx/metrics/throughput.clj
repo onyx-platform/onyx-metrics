@@ -5,7 +5,7 @@
 (defn pre [event lifecycle]
   (let [retention (:onyx.metrics.throughput/retention-ms lifecycle)
         interval (:onyx.metrics.throughput/interval-ms lifecycle)
-        r-seq {:throughput (rsc/create-r-seq retention interval)}
+        r-seq (rsc/create-r-seq retention interval)
         state (or (:onyx.metrics/state event) (atom {}))]
     (swap! state assoc :throughput r-seq)
     {:onyx.metrics/state state
@@ -15,12 +15,14 @@
                              (Thread/sleep interval)
                              (swap! state update-in [:throughput] rsc/expire-bucket)
                              (recur))
+                           (catch InterruptedException e)
                            (catch Throwable e
                              (fatal e))))}))
 
 (defn post-batch [event lifecycle]
   (let [state (:onyx.metrics/state event)]
-    (swap! state update-in [:throughput] rsc/add-to-head [(count (:onyx.core/batch event))])
+    (swap! state update-in [:throughput] rsc/update-head
+           (fn [coll] (+ (apply + coll) (count (:onyx.core/batch event)))))
     {}))
 
 (defn post [event lifecycle]
