@@ -38,7 +38,7 @@ Computes throughput in terms of segments per second for 10s, 30s, and 60s window
 Computes the 50th, 90th, and 99th percentile latency in milliseconds per batch of segments for 10s, 30s, and 60s windows.
 
 ```clojure
-{:lifecycle/task :inc
+{:lifecycle/task :my-task-name
  :lifecycle/pre :onyx.lifecycle.metrics.latency/pre
  :lifecycle/pre-batch :onyx.lifecycle.metrics.latency/pre-batch
  :lifecycle/post-batch :onyx.lifecycle.metrics.latency/post-batch
