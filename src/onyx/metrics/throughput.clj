@@ -1,5 +1,6 @@
 (ns onyx.metrics.throughput
-  (:require [rotating-seq.core :as rsc]))
+  (:require [rotating-seq.core :as rsc]
+            [taoensso.timbre :refer [fatal]]))
 
 (defn pre [event lifecycle]
   (let [retention (:onyx.metrics.throughput/retention-ms lifecycle)
@@ -35,7 +36,6 @@
 
  {:lifecycle/task :all
   :lifecycle/pre :onyx.metrics.timbre/pre
-  :lifecycle/pre :onyx.metrics.timbre/post
-  :lifecycle/post-batch :onyx.metrics.timbre/post-batch
+  :lifecycle/post :onyx.metrics.timbre/post
   :onyx.metrics.throughput/interval-ms 5000
   :lifecycle/doc "Prints task metrics to Timbre every 5000 ms"}]
