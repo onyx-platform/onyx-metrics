@@ -9,15 +9,16 @@
         state (or (:onyx.metrics/state event) (atom {}))]
     (swap! state assoc :throughput r-seq)
     {:onyx.metrics/state state
-     :onyx.metrics/fut (future
-                         (try
-                           (loop []
-                             (Thread/sleep interval)
-                             (swap! state update-in [:throughput] rsc/expire-bucket)
-                             (recur))
-                           (catch InterruptedException e)
-                           (catch Throwable e
-                             (fatal e))))}))
+     :onyx.metrics.throughput/fut
+     (future
+       (try
+         (loop []
+           (Thread/sleep interval)
+           (swap! state update-in [:throughput] rsc/expire-bucket)
+           (recur))
+         (catch InterruptedException e)
+         (catch Throwable e
+           (fatal e))))}))
 
 (defn post-batch [event lifecycle]
   (let [state (:onyx.metrics/state event)]
@@ -26,5 +27,5 @@
     {}))
 
 (defn post [event lifecycle]
-  (future-cancel (:onyx.metrics/fut event))
+  (future-cancel (:onyx.metrics.throughput/fut event))
   {})

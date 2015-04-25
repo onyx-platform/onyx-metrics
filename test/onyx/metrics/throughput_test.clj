@@ -4,6 +4,7 @@
             [onyx.peer.task-lifecycle-extensions :as l-ext]
             [onyx.plugin.core-async :refer [take-segments!]]
             [onyx.lifecycle.metrics.throughput]
+            [onyx.lifecycle.metrics.latency]
             [onyx.lifecycle.metrics.timbre]
             [onyx.api]))
 
@@ -19,12 +20,10 @@
   {:zookeeper/address "127.0.0.1:2188"
    :onyx/id id
    :onyx.peer/job-scheduler :onyx.job-scheduler/greedy
-   :onyx.messaging/impl :aeron
+   :onyx.messaging/impl :netty
    :onyx.messaging/peer-port-range [40200 40260]
    :onyx.messaging/peer-ports [40199]
-   :onyx.messaging/bind-addr "localhost"
-   :onyx.messaging.aeron/embedded-driver? true
-   :onyx.messaging.aeron/backpressure-strategy :high-restart-latency})
+   :onyx.messaging/bind-addr "localhost"})
 
 (def env (onyx.api/start-env env-config))
 
@@ -67,7 +66,15 @@
     :lifecycle/post-batch :onyx.lifecycle.metrics.throughput/post-batch
     :lifecycle/post :onyx.lifecycle.metrics.throughput/post
     :throughput/retention-ms 60000
-    :lifecycle/doc "Instruments a tasks throughput metrics"}
+    :lifecycle/doc "Instruments a task's throughput metrics"}
+
+   {:lifecycle/task :inc
+    :lifecycle/pre :onyx.lifecycle.metrics.latency/pre
+    :lifecycle/pre-batch :onyx.lifecycle.metrics.latency/pre-batch
+    :lifecycle/post-batch :onyx.lifecycle.metrics.latency/post-batch
+    :lifecycle/post :onyx.lifecycle.metrics.latency/post
+    :latency/retention-ms 60000
+    :lifecycle/doc "Instruments a task's latency metrics per batch"}
 
    {:lifecycle/task :inc
     :lifecycle/pre :onyx.lifecycle.metrics.timbre/pre
