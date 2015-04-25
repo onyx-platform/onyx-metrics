@@ -1,4 +1,4 @@
-(ns onyx.metrics.timbre
+(ns onyx.lifecycle.metrics.timbre
   (:require [taoensso.timbre :as timbre]))
 
 (defn pre [event lifecycle]
@@ -6,7 +6,7 @@
    (future
      (try
        (loop []
-         (Thread/sleep (:onyx.metrics.throughput/interval-ms lifecycle))
+         (Thread/sleep (:timbre/interval-ms lifecycle))
          (let [throughput (:throughput @(:onyx.metrics/state event))]
            (taoensso.timbre/info (format "[%s] Task [%s] :: Throughput :: %s segments in 10s :: %s segments in 30s :: %s segments in 60s"
                                          (:onyx.core/id event) (:onyx.core/task-id event)

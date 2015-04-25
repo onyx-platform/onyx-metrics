@@ -1,9 +1,9 @@
-(ns onyx.metrics.throughput
+(ns onyx.lifecycle.metrics.throughput
   (:require [rotating-seq.core :as rsc]
             [taoensso.timbre :refer [fatal]]))
 
 (defn pre [event lifecycle]
-  (let [retention (:onyx.metrics.throughput/retention-ms lifecycle)
+  (let [retention (:throughput/retention-ms lifecycle)
         interval 1000
         r-seq (rsc/create-r-seq retention interval)
         state (or (:onyx.metrics/state event) (atom {}))]
