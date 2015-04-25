@@ -3,8 +3,8 @@
             [midje.sweet :refer :all]
             [onyx.peer.task-lifecycle-extensions :as l-ext]
             [onyx.plugin.core-async :refer [take-segments!]]
-            [onyx.metrics.throughput]
-            [onyx.metrics.timbre]
+            [onyx.lifecycle.metrics.throughput]
+            [onyx.lifecycle.metrics.timbre]
             [onyx.api]))
 
 (def id (java.util.UUID/randomUUID))
@@ -63,17 +63,17 @@
 
 (def lifecycles
   [{:lifecycle/task :inc
-    :lifecycle/pre :onyx.metrics.throughput/pre
-    :lifecycle/post-batch :onyx.metrics.throughput/post-batch
-    :lifecycle/post :onyx.metrics.throughput/post
-    :onyx.metrics.throughput/retention-ms 60000
+    :lifecycle/pre :onyx.lifecycle.metrics.throughput/pre
+    :lifecycle/post-batch :onyx.lifecycle.metrics.throughput/post-batch
+    :lifecycle/post :onyx.lifecycle.metrics.throughput/post
+    :throughput/retention-ms 60000
     :lifecycle/doc "Instruments a tasks throughput metrics"}
 
    {:lifecycle/task :inc
-    :lifecycle/pre :onyx.metrics.timbre/pre
-    :lifecycle/post :onyx.metrics.timbre/post
-    :onyx.metrics.throughput/interval-ms 2000
-    :lifecycle/doc "Prints task metrics to Timbre every 5000 ms"}])
+    :lifecycle/pre :onyx.lifecycle.metrics.timbre/pre
+    :lifecycle/post :onyx.lifecycle.metrics.timbre/post
+    :timbre/interval-ms 2000
+    :lifecycle/doc "Prints task metrics to Timbre every 2000 ms"}])
 
 (def in-chan (chan (inc n-messages)))
 
