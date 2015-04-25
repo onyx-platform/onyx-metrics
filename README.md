@@ -22,6 +22,8 @@ In your peer boot-up namespace:
 
 ##### Throughput
 
+Computes throughput in terms of segments per second for 10s, 30s, and 60s windows.
+
 ```clojure
 {:lifecycle/task :my-task-name
  :lifecycle/pre :onyx.lifecycle.metrics.throughput/pre
@@ -31,7 +33,23 @@ In your peer boot-up namespace:
  :lifecycle/doc "Instruments a task's throughput metrics"}
 ```
 
+##### Batch Latency
+
+Computes the 50th, 90th, and 99th percentile latency in milliseconds per batch of segments for 10s, 30s, and 60s windows.
+
+```clojure
+{:lifecycle/task :inc
+ :lifecycle/pre :onyx.lifecycle.metrics.latency/pre
+ :lifecycle/pre-batch :onyx.lifecycle.metrics.latency/pre-batch
+ :lifecycle/post-batch :onyx.lifecycle.metrics.latency/post-batch
+ :lifecycle/post :onyx.lifecycle.metrics.latency/post
+ :latency/retention-ms 60000
+ :lifecycle/doc "Instruments a task's latency metrics per batch"}
+```
+
 ##### Timbre Logging
+
+Logs all statistics collected to Timbre.
 
 ```clojure
 {:lifecycle/task :my-task-name
