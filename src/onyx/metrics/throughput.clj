@@ -4,7 +4,7 @@
 
 (defn pre [event lifecycle]
   (let [retention (:onyx.metrics.throughput/retention-ms lifecycle)
-        interval (:onyx.metrics.throughput/interval-ms lifecycle)
+        interval 1000
         r-seq (rsc/create-r-seq retention interval)
         state (or (:onyx.metrics/state event) (atom {}))]
     (swap! state assoc :throughput r-seq)

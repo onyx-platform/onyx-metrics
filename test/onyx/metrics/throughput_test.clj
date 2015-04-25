@@ -67,7 +67,6 @@
     :lifecycle/post-batch :onyx.metrics.throughput/post-batch
     :lifecycle/post :onyx.metrics.throughput/post
     :onyx.metrics.throughput/retention-ms 60000
-    :onyx.metrics.throughput/interval-ms 1000
     :lifecycle/doc "Instruments a tasks throughput metrics"}
 
    {:lifecycle/task :inc
