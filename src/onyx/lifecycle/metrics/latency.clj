@@ -2,7 +2,7 @@
   (:require [rotating-seq.core :as rsc]
             [taoensso.timbre :refer [fatal]]))
 
-(defn before [event lifecycle]
+(defn before-task [event lifecycle]
   (let [retention (:latency/retention-ms lifecycle)
         interval 1000
         r-seq (rsc/create-r-seq retention interval)
