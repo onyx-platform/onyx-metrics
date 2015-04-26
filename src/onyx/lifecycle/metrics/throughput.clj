@@ -2,7 +2,7 @@
   (:require [rotating-seq.core :as rsc]
             [taoensso.timbre :refer [fatal]]))
 
-(defn pre [event lifecycle]
+(defn before-task [event lifecycle]
   (let [retention (:throughput/retention-ms lifecycle)
         interval 1000
         r-seq (rsc/create-r-seq retention interval)
@@ -20,12 +20,17 @@
          (catch Throwable e
            (fatal e))))}))
 
-(defn post-batch [event lifecycle]
+(defn after-batch [event lifecycle]
   (let [state (:onyx.metrics/state event)]
     (swap! state update-in [:throughput] rsc/update-head
            (fn [coll] (+ (apply + coll) (count (:onyx.core/batch event)))))
     {}))
 
-(defn post [event lifecycle]
+(defn after-task [event lifecycle]
   (future-cancel (:onyx.metrics.throughput/fut event))
   {})
+
+(def calls
+  {:lifecycle/before-task :onyx.lifecycle.metrics.throughput/before-task
+   :lifecycle/after-batch :onyx.lifecycle.metrics.throughput/after-batch
+   :lifecycle/after-task :onyx.lifecycle.metrics.throughput/after-task})

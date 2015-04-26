@@ -16,7 +16,7 @@
         (= c k) mx
         :else (+ ndk (* d (- (nth svs k) ndk)))))))
 
-(defn pre [event lifecycle]
+(defn before-task [event lifecycle]
   {:onyx.metrics/timbre-fut
    (future
      (try
@@ -68,6 +68,10 @@
        (catch Throwable e
          (timbre/fatal e))))})
 
-(defn post [event lifecycle]
+(defn after-task [event lifecycle]
   (future-cancel (:onyx.metrics/timbre-fut event))
   {})
+
+(def calls
+  {:lifecycle/before-task :onyx.lifecycle.metrics.timbre/before-task
+   :lifecycle/after-task :onyx.lifecycle.metrics.timbre/after-task})

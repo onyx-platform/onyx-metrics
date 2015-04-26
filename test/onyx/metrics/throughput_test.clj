@@ -62,23 +62,17 @@
 
 (def lifecycles
   [{:lifecycle/task :inc
-    :lifecycle/pre :onyx.lifecycle.metrics.throughput/pre
-    :lifecycle/post-batch :onyx.lifecycle.metrics.throughput/post-batch
-    :lifecycle/post :onyx.lifecycle.metrics.throughput/post
+    :lifecycle/calls :onyx.lifecycle.metrics.throughput/calls
     :throughput/retention-ms 60000
     :lifecycle/doc "Instruments a task's throughput metrics"}
 
    {:lifecycle/task :inc
-    :lifecycle/pre :onyx.lifecycle.metrics.latency/pre
-    :lifecycle/pre-batch :onyx.lifecycle.metrics.latency/pre-batch
-    :lifecycle/post-batch :onyx.lifecycle.metrics.latency/post-batch
-    :lifecycle/post :onyx.lifecycle.metrics.latency/post
+    :lifecycle/calls :onyx.lifecycle.metrics.latency/calls
     :latency/retention-ms 60000
     :lifecycle/doc "Instruments a task's latency metrics per batch"}
 
    {:lifecycle/task :inc
-    :lifecycle/pre :onyx.lifecycle.metrics.timbre/pre
-    :lifecycle/post :onyx.lifecycle.metrics.timbre/post
+    :lifecycle/calls :onyx.lifecycle.metrics.timbre/calls
     :timbre/interval-ms 2000
     :lifecycle/doc "Prints task metrics to Timbre every 2000 ms"}])
 
