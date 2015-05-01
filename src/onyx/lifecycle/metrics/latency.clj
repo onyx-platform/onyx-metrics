@@ -34,7 +34,7 @@
   {})
 
 (def calls
-  {:lifecycle/before-task :onyx.lifecycle.metrics.latency/before-task
-   :lifecycle/before-batch :onyx.lifecycle.metrics.latency/before-batch
-   :lifecycle/after-batch :onyx.lifecycle.metrics.latency/after-batch
-   :lifecycle/after-task :onyx.lifecycle.metrics.latency/after-task})
+  {:lifecycle/before-task before-task
+   :lifecycle/before-batch before-batch
+   :lifecycle/after-batch after-batch
+   :lifecycle/after-task after-task})

@@ -31,6 +31,6 @@
   {})
 
 (def calls
-  {:lifecycle/before-task :onyx.lifecycle.metrics.throughput/before-task
-   :lifecycle/after-batch :onyx.lifecycle.metrics.throughput/after-batch
-   :lifecycle/after-task :onyx.lifecycle.metrics.throughput/after-task})
+  {:lifecycle/before-task before-task
+   :lifecycle/after-batch after-batch
+   :lifecycle/after-task after-task})

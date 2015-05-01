@@ -59,5 +59,5 @@
   {})
 
 (def calls
-  {:lifecycle/before-task :onyx.lifecycle.metrics.timbre/before-task
-   :lifecycle/after-task :onyx.lifecycle.metrics.timbre/after-task})
+  {:lifecycle/before-task before-task
+   :lifecycle/after-task after-task})
