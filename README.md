@@ -21,6 +21,8 @@ In your peer boot-up namespace:
 
 #### Lifecycle entries
 
+Add these maps to your `:lifecycles` vector in the argument to `:onyx.api/submit-job`.
+
 ##### Throughput
 
 Computes throughput in terms of segments per second for 10s, 30s, and 60s windows.
