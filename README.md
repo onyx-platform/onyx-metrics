@@ -1,6 +1,6 @@
 # onyx-metrics
 
-Onyx Lifecycle plugin for instrumenting workflows. Track throughput and metrics of your tasks and log the output to Timbre and/or dashboard.
+Onyx Lifecycle plugin for instrumenting workflows. Track throughput and metrics of your tasks and log the output to Timbre and/or dashboard via websockets.
 
 #### Installation
 
@@ -15,7 +15,8 @@ In your peer boot-up namespace:
 ```clojure
 (:require [onyx.lifecycle.metrics.throughput]
           [onyx.lifecycle.metrics.latency]
-          [onyx.lifecycle.metrics.timbre])
+          [onyx.lifecycle.metrics.timbre]
+          [onyx.lifecycle.metrics.websocket)
 ```
 
 #### Lifecycle entries
@@ -51,6 +52,18 @@ Logs all statistics collected to Timbre.
  :lifecycle/calls :onyx.lifecycle.metrics.timbre/calls
  :timbre/interval-ms 2000
  :lifecycle/doc "Prints task metrics to Timbre every 2000 ms"}
+```
+
+#### Websocket output
+
+Sends all metric data to a websocket. The Onyx dashboard already knows what to do with this output, but you can direct it anywhere.
+
+```clojure
+{:lifecycle/task task
+ :lifecycle/calls :onyx.lifecycle.metrics.websocket/calls
+ :websocket/address "ws://127.0.0.1:3000/metrics"
+ :websocket/interval-ms 2000
+ :lifecycle/doc "Sends metric data to a websocket."}
 ```
 
 ## License
