@@ -34,7 +34,7 @@
   {})
 
 (def calls
-  {:lifecycle/before-task before-task
+  {:lifecycle/before-task-start before-task
    :lifecycle/before-batch before-batch
    :lifecycle/after-batch after-batch
-   :lifecycle/after-task after-task})
+   :lifecycle/after-task-stop after-task})
