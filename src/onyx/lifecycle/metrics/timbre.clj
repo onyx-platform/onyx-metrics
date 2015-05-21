@@ -59,5 +59,5 @@
   {})
 
 (def calls
-  {:lifecycle/before-task before-task
-   :lifecycle/after-task after-task})
+  {:lifecycle/before-task-start before-task
+   :lifecycle/after-task-stop after-task})

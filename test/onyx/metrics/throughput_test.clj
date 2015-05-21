@@ -1,7 +1,6 @@
 (ns onyx.metrics.throughput-test
   (:require [clojure.core.async :refer [chan >!! <!! close! sliding-buffer]]
             [midje.sweet :refer :all]
-            [onyx.peer.task-lifecycle-extensions :as l-ext]
             [onyx.plugin.core-async :refer [take-segments!]]
             [onyx.lifecycle.metrics.throughput]
             [onyx.lifecycle.metrics.latency]
@@ -60,8 +59,29 @@
 
 (def workflow [[:in :inc] [:inc :out]])
 
+(def in-chan (chan (inc n-messages)))
+
+(def out-chan (chan (sliding-buffer (inc n-messages))))
+
+(defn inject-in-ch [event lifecycle]
+  {:core.async/chan in-chan})
+
+(defn inject-out-ch [event lifecycle]
+  {:core.async/chan out-chan})
+
+(def in-calls
+  {:lifecycle/before-task-start inject-in-ch})
+
+(def out-calls
+  {:lifecycle/before-task-start inject-out-ch})
+
 (def lifecycles
-  [{:lifecycle/task :inc
+  [{:lifecycle/task :in
+    :lifecycle/calls :onyx.metrics.throughput-test/in-calls}
+   {:lifecycle/task :in
+    :lifecycle/calls :onyx.plugin.core-async/reader-calls}
+
+   {:lifecycle/task :inc
     :lifecycle/calls :onyx.lifecycle.metrics.throughput/calls
     :throughput/retention-ms 60000
     :lifecycle/doc "Instruments a task's throughput metrics"}
@@ -74,17 +94,12 @@
    {:lifecycle/task :inc
     :lifecycle/calls :onyx.lifecycle.metrics.timbre/calls
     :timbre/interval-ms 2000
-    :lifecycle/doc "Prints task metrics to Timbre every 2000 ms"}])
+    :lifecycle/doc "Prints task metrics to Timbre every 2000 ms"}
 
-(def in-chan (chan (inc n-messages)))
-
-(def out-chan (chan (sliding-buffer (inc n-messages))))
-
-(defmethod l-ext/inject-lifecycle-resources :in
-  [_ _] {:core.async/chan in-chan})
-
-(defmethod l-ext/inject-lifecycle-resources :out
-  [_ _] {:core.async/chan out-chan})
+   {:lifecycle/task :out
+    :lifecycle/calls :onyx.metrics.throughput-test/out-calls}
+   {:lifecycle/task :out
+    :lifecycle/calls :onyx.plugin.core-async/writer-calls}])
 
 (doseq [n (range n-messages)]
   (>!! in-chan {:n n}))
