@@ -1,4 +1,4 @@
-(defproject com.mdrogalis/onyx-metrics "0.6.0-beta1"
+(defproject com.mdrogalis/onyx-metrics "0.6.0-SNAPSHOT"
   :description "Instrument Onyx workflows"
   :url "https://github.com/MichaelDrogalis/onyx"
   :license {:name "Eclipse Public License"
