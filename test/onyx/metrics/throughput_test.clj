@@ -5,6 +5,7 @@
             [onyx.lifecycle.metrics.throughput]
             [onyx.lifecycle.metrics.latency]
             [onyx.lifecycle.metrics.timbre]
+            [onyx.lifecycle.metrics.websocket]
             [onyx.api]))
 
 (def id (java.util.UUID/randomUUID))
@@ -90,6 +91,12 @@
     :lifecycle/calls :onyx.lifecycle.metrics.latency/calls
     :latency/retention-ms 60000
     :lifecycle/doc "Instruments a task's latency metrics per batch"}
+
+   {:lifecycle/task :inc
+    :lifecycle/calls :onyx.lifecycle.metrics.websocket/calls
+    :websocket/address "ws://127.0.0.1:3000/metrics"
+    :websocket/interval-ms 2000
+    :lifecycle/doc "Sends metric data to a websocket."}
 
    {:lifecycle/task :inc
     :lifecycle/calls :onyx.lifecycle.metrics.timbre/calls
