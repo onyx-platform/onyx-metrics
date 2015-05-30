@@ -16,7 +16,7 @@ In your peer boot-up namespace:
 (:require [onyx.lifecycle.metrics.throughput]
           [onyx.lifecycle.metrics.latency]
           [onyx.lifecycle.metrics.timbre]
-          [onyx.lifecycle.metrics.websocket)
+          [onyx.lifecycle.metrics.websocket])
 ```
 
 #### Lifecycle entries
