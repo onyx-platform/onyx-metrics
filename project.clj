@@ -6,7 +6,8 @@
   :dependencies [[org.clojure/clojure "1.6.0"]
                  [com.mdrogalis/rotating-seq "0.1.3"]
                  [com.taoensso/timbre "3.0.1"]
-                 [stylefruits/gniazdo "0.4.0"]]
+                 [stylefruits/gniazdo "0.4.0"]
+                 [riemann-clojure-client "0.4.1"]]
   :profiles {:dev {:dependencies [[org.onyxplatform/onyx "0.6.0"]
                                   [midje "1.6.3"]]
                    :plugins [[lein-midje "3.1.1"]]}})
