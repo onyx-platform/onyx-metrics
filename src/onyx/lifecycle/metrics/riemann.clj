@@ -13,8 +13,8 @@
        (loop []
          (Thread/sleep (:riemann/interval-ms lifecycle))
          (let [state @(:onyx.metrics/state event)
-               client (r/tcp-client {:host (:riemann/client lifecycle)})
-               name   (:riemann/name lifecycle)
+               client (r/tcp-client {:host (:riemann/address lifecycle)})
+               name   (:riemann/workflow-name lifecycle)
                task-name (str (:onyx.core/task event))]
            (when-let [throughput (:throughput state)]
              (r/send-event client {:service (format "[%s] 1s_throughput" task-name)
