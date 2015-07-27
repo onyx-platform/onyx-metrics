@@ -75,7 +75,7 @@ Send all metrics to a Riemann instance.
 ```clojure
 {:lifecycle/task task
 :lifecycle/calls :onyx.lifecycle.metrics.riemann/calls
-:riemann/workflow-name workflow-name
+:riemann/workflow-name workflow-name ;; An extra tag for riemann, in order to namespace multiple running Onyx jobs.
 :riemann/address "192.168.99.100"
 :riemann/interval-ms 1000}
 ```
