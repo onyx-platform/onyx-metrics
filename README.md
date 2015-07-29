@@ -81,7 +81,7 @@ Send all metrics to a Riemann instance.
 :riemann/interval-ms 1000}
 ```
 Sometimes, you may want a quick way to instrument all the tasks in a workflow.
-This can be quickly achieved using something like this.
+This can be achieved using something like this.
 
 ```clojure
 
