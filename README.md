@@ -16,7 +16,8 @@ In your peer boot-up namespace:
 (:require [onyx.lifecycle.metrics.throughput]
           [onyx.lifecycle.metrics.latency]
           [onyx.lifecycle.metrics.timbre]
-          [onyx.lifecycle.metrics.websocket])
+          [onyx.lifecycle.metrics.websocket]
+          [onyx.lifecycle.metrics.riemann])
 ```
 
 #### Lifecycle entries
@@ -66,6 +67,42 @@ Sends all metric data to a websocket. The Onyx dashboard already knows what to d
  :websocket/address "ws://127.0.0.1:3000/metrics"
  :websocket/interval-ms 2000
  :lifecycle/doc "Sends metric data to a websocket."}
+```
+
+#### Riemann output
+
+Send all metrics to a Riemann instance.
+
+```clojure
+{:lifecycle/task task
+ :lifecycle/calls :onyx.lifecycle.metrics.riemann/calls
+ :riemann/workflow-name workflow-name ;; An extra tag for riemann, in order to namespace multiple running Onyx jobs.
+ :riemann/address "192.168.99.100"
+ :riemann/interval-ms 1000}
+```
+Sometimes, you may want a quick way to instrument all the tasks in a workflow.
+This can be achieved using something like this.
+
+```clojure
+
+(defn add-metrics [lifecycle workflow retention-ms reporting-ms riemann-hostname riemann-name]
+  (let [tasks (distinct (flatten denver-health-workflow))]
+    (-> (reduce (fn [acc x]
+      (conj acc
+            {:lifecycle/task x
+             :lifecycle/calls :onyx.lifecycle.metrics.throughput/calls
+             :throughput/retention-ms (or retention-ms 60000)}
+
+            {:lifecycle/task x
+             :lifecycle/calls :onyx.lifecycle.metrics.latency/calls
+             :latency/retention-ms (or retention-ms 60000)}
+
+            {:lifecycle/task x
+             :lifecycle/calls :onyx.lifecycle.metrics.riemann/calls
+             :riemann/interval-ms (or reporting-ms 1000)
+             :riemann/workflow-name riemann-name
+             :riemann/address riemann-hostname})) [] tasks)
+       (concat lifecycle))))
 ```
 
 ## License
