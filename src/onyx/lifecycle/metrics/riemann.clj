@@ -18,29 +18,29 @@
                task-name (str (:onyx.core/task event))
                peer-id (str (:onyx.core/id event))]
            (when-let [throughput (:throughput state)]
-             (r/send-event client {:service (format "[%s|%s] 1s_throughput" peer-id task-name)
+             (r/send-event client {:service (format "[%s] 1s_throughput" task-name)
                                    :state "ok" :metric (apply + (map #(apply + %) (take 1 throughput)))
                                    :tags ["throughput_1s" "onyx" task-name name peer-id]})
 
-             (r/send-event client {:service (format "[%s|%s] 10s_throughput" peer-id task-name)
+             (r/send-event client {:service (format "[%s] 10s_throughput" task-name)
                                    :state "ok" :metric (apply + (map #(apply + %) (take 10 throughput)))
                                    :tags ["throughput_10s" "onyx" task-name name peer-id]})
 
-             (r/send-event client {:service (format "[%s|%s] 60s_throughput" peer-id task-name)
+             (r/send-event client {:service (format "[%s] 60s_throughput" task-name)
                                    :state "ok" :metric (apply + (map #(apply + %) (take 60 throughput)))
                                    :tags ["throughput_60s" "onyx" task-name name peer-id]}))
            (when-let [latency (:latency state)]
-             (r/send-event client {:service (format "[%s|%s] 50_percentile_latency" peer-id task-name)
+             (r/send-event client {:service (format "[%s] 50_percentile_latency" task-name)
                                    :state "ok" :metric (quantile 0.50 (apply concat (take 10 latency)))
                                    :tags ["latency_50th" "onyx" "50_percentile" task-name name
                                           peer-id]})
 
-             (r/send-event client {:service (format "[%s|%s] 90_percentile_latency" peer-id task-name)
+             (r/send-event client {:service (format "[%s] 90_percentile_latency" task-name)
                                    :state "ok" :metric (quantile 0.90 (apply concat (take 10 latency)))
                                    :tags ["latency_90th" "onyx" task-name name
                                           peer-id]})
 
-             (r/send-event client {:service (format "[%s|%s] 99_percentile_latency" peer-id task-name)
+             (r/send-event client {:service (format "[%s] 99_percentile_latency" task-name)
                                    :state "ok" :metric (quantile 0.99 (apply concat (take 10 latency)))
                                    :tags ["latency_99th" "onyx" task-name name
                                           peer-id]}))
