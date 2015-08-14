@@ -78,6 +78,7 @@ Send all metrics to a Riemann instance.
  :lifecycle/calls :onyx.lifecycle.metrics.riemann/calls
  :riemann/workflow-name workflow-name ;; An extra tag for riemann, in order to namespace multiple running Onyx jobs.
  :riemann/address "192.168.99.100"
+ :riemann/port 5555
  :riemann/interval-ms 1000}
 ```
 Sometimes, you may want a quick way to instrument all the tasks in a workflow.
@@ -85,7 +86,7 @@ This can be achieved using something like this.
 
 ```clojure
 
-(defn add-metrics [lifecycle workflow retention-ms reporting-ms riemann-hostname riemann-name]
+(defn add-metrics [lifecycle workflow retention-ms reporting-ms riemann-hostname riemann-port riemann-name]
   (let [tasks (distinct (flatten denver-health-workflow))]
     (-> (reduce (fn [acc x]
       (conj acc
@@ -101,7 +102,8 @@ This can be achieved using something like this.
              :lifecycle/calls :onyx.lifecycle.metrics.riemann/calls
              :riemann/interval-ms (or reporting-ms 1000)
              :riemann/workflow-name riemann-name
-             :riemann/address riemann-hostname})) [] tasks)
+             :riemann/address riemann-hostname
+	     :riemann/port riemann-port})) [] tasks)
        (concat lifecycle))))
 ```
 
