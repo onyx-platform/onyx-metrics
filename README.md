@@ -7,7 +7,7 @@ Onyx Lifecycle plugin for instrumenting workflows. Track throughput and metrics 
 In your project file:
 
 ```clojure
-[org.onyxplatform/onyx-metrics "0.7.0"]
+[org.onyxplatform/onyx-metrics "0.7.2-SNAPSHOT"]
 ```
 
 In your peer boot-up namespace:
@@ -71,7 +71,7 @@ Sends all metric data to a websocket. The Onyx dashboard already knows what to d
 
 #### Riemann output
 
-Send all metrics to a Riemann instance.
+Send all metrics to a Riemann instance on a single thread. Events are buffered in a core.async channel with capacity `:riemann/buffer-capacity`, default capacity is 10,000.
 
 ```clojure
 {:lifecycle/task task
@@ -79,8 +79,10 @@ Send all metrics to a Riemann instance.
  :riemann/workflow-name workflow-name ;; An extra tag for riemann, in order to namespace multiple running Onyx jobs.
  :riemann/address "192.168.99.100"
  :riemann/port 5555
- :riemann/interval-ms 1000}
+ :riemann/interval-ms 1000
+ :riemann/buffer-capacity 10000}
 ```
+
 Sometimes, you may want a quick way to instrument all the tasks in a workflow.
 This can be achieved using something like this.
 
