@@ -9,7 +9,7 @@
     (let [client (r/tcp-client {:host address :port port})]
       (loop []
         (try
-          (let [event (<!! ch)]
+          (when-let [event (<!! ch)]
             @(r/send-event client event))
           (catch InterruptedException e
             ;; Intentionally pass.
