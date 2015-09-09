@@ -71,7 +71,14 @@ Sends all metric data to a websocket. The Onyx dashboard already knows what to d
 
 #### Riemann output
 
+
 Send all metrics to a Riemann instance on a single thread. Events are buffered in a core.async channel with capacity `:riemann/buffer-capacity`, default capacity is 10,000.
+
+First, add the clojure riemann client dependency to your project. e.g.
+```clojure
+[riemann-clojure-client "0.4.1"]
+```
+Then setup the lifecycles:
 
 ```clojure
 {:lifecycle/task task
