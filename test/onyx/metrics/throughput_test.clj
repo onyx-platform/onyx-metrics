@@ -20,9 +20,8 @@
   {:zookeeper/address "127.0.0.1:2188"
    :onyx/id id
    :onyx.peer/job-scheduler :onyx.job-scheduler/greedy
-   :onyx.messaging/impl :netty
+   :onyx.messaging/impl :aeron
    :onyx.messaging/peer-port-range [40200 40260]
-   :onyx.messaging/peer-ports [40199]
    :onyx.messaging/bind-addr "localhost"})
 
 (def env (onyx.api/start-env env-config))
@@ -38,7 +37,7 @@
 
 (def catalog
   [{:onyx/name :in
-    :onyx/ident :onyx.plugin.core-async/input
+    :onyx/plugin :onyx.plugin.core-async/input
     :onyx/type :input
     :onyx/medium :core.async
     :onyx/batch-size batch-size
@@ -51,7 +50,7 @@
     :onyx/batch-size batch-size}
 
    {:onyx/name :out
-    :onyx/ident :onyx.plugin.core-async/output
+    :onyx/plugin :onyx.plugin.core-async/output
     :onyx/type :output
     :onyx/medium :core.async
     :onyx/batch-size batch-size
@@ -91,12 +90,6 @@
     :lifecycle/calls :onyx.lifecycle.metrics.latency/calls
     :latency/retention-ms 60000
     :lifecycle/doc "Instruments a task's latency metrics per batch"}
-
-   {:lifecycle/task :inc
-    :lifecycle/calls :onyx.lifecycle.metrics.websocket/calls
-    :websocket/address "ws://127.0.0.1:3000/metrics"
-    :websocket/interval-ms 2000
-    :lifecycle/doc "Sends metric data to a websocket."}
 
    {:lifecycle/task :inc
     :lifecycle/calls :onyx.lifecycle.metrics.timbre/calls

@@ -10,6 +10,6 @@
                                   [org.onyxplatform/onyx "0.7.4-20150916_205458-gf33df5b"]
                                   [org.clojure/core.async "0.1.346.0-17112a-alpha"]
                                   [riemann-clojure-client "0.4.1"]
-                                  [com.taoensso/timbre "3.0.1"]
+                                  [com.taoensso/timbre "4.1.1"]
                                   [midje "1.7.0"]]
                    :plugins [[lein-midje "3.1.3"]]}})
