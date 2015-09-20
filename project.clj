@@ -1,4 +1,4 @@
-(defproject org.onyxplatform/onyx-metrics "0.7.4-SNAPSHOT"
+(defproject org.onyxplatform/onyx-metrics "0.7.5"
   :description "Instrument Onyx workflows"
   :url "https://github.com/MichaelDrogalis/onyx"
   :license {:name "Eclipse Public License"
@@ -7,7 +7,7 @@
                  [com.mdrogalis/rotating-seq "0.1.3"]
                  [stylefruits/gniazdo "0.4.0"]]
   :profiles {:dev {:dependencies [^{:voom {:repo "git@github.com:onyx-platform/onyx.git" :branch "master"}}
-                                  [org.onyxplatform/onyx "0.7.4-20150916_205458-gf33df5b"]
+                                  [org.onyxplatform/onyx "0.7.5"]
                                   [org.clojure/core.async "0.1.346.0-17112a-alpha"]
                                   [riemann-clojure-client "0.4.1"]
                                   [com.taoensso/timbre "4.1.1"]
