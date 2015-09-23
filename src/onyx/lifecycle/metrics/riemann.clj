@@ -27,8 +27,9 @@
          (loop []
            (Thread/sleep (:riemann/interval-ms lifecycle))
            (let [state @(:onyx.metrics/state event)
-                 name (:riemann/workflow-name lifecycle)
+                 name (str (:riemann/workflow-name lifecycle))
                  task-name (str (:onyx.core/task event))]
+             (assert task-name ":riemann/workflow-name must be defined")
              (when-let [throughput (:throughput state)]
                (>!! ch {:service (format "[%s] 1s_throughput" task-name)
                         :state "ok" :metric (apply + (map #(apply + %) (take 1 throughput)))
