@@ -13,4 +13,5 @@
                                   [com.taoensso/timbre "4.1.1"]
                                   [midje "1.7.0"]]
                    :plugins [[lein-midje "3.1.3"]
+                             [lein-set-version "0.4.1"]
                              [lein-pprint  "1.1.1"]]}})
