@@ -4,7 +4,7 @@
             [interval-metrics.core :as im]))
 
 (def historical-throughput-max-count 1000)
-(def latency-period 10)
+(def latency-period-secs 10)
 
 (defn before-task [event lifecycle]
   (let [throughputs (atom (list))
@@ -80,7 +80,7 @@
                (taoensso.timbre/info (format "[%s] Task [%s] :: Batch Latency 10s 99.9th Percentile :: %s ms"
                                              (:onyx.core/id event) (:onyx.core/task-id event)
                                              (get latencies-vals 0.999)))))
-           (recur (mod (inc cycle-count) latency-period)))
+           (recur (mod (inc cycle-count) latency-period-secs)))
          (catch InterruptedException e)
          (catch Throwable e
            (timbre/fatal e))))}))

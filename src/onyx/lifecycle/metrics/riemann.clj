@@ -25,7 +25,7 @@
         (recur)))))
 
 (def historical-throughput-max-count 1000)
-(def latency-period 10)
+(def latency-period-secs 10)
 
 (defn before-task [event {:keys [riemann/address riemann/port] :as lifecycle}]
   ;; Dropping is better than blocking and the metrics timings going awry
@@ -62,7 +62,7 @@
                         :state "ok" :metric (apply + (take 60 throughputs-val))
                         :tags ["throughput_60s" "onyx" task-name name]}))
 
-             (when (= cycle-count latency-period)
+             (when (= cycle-count latency-period-secs)
                (when-let [rate+latency (:rate+latency-10s metrics)]
                  (let [latency-snapshot (im/snapshot! rate+latency) 
                        latencies-vals (->> latency-snapshot 
