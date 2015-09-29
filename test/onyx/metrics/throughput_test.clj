@@ -28,7 +28,7 @@
 
 (def peer-group (onyx.api/start-peer-group peer-config))
 
-(def n-messages 1000000)
+(def n-messages 100000)
 
 (def batch-size 20)
 
@@ -81,7 +81,7 @@
    {:lifecycle/task :in
     :lifecycle/calls :onyx.plugin.core-async/reader-calls}
 
-   {:lifecycle/task :all
+   #_{:lifecycle/task :all
     :lifecycle/calls :onyx.lifecycle.metrics.riemann/calls
     :riemann/address "192.168.99.100"
     :riemann/port 5555
