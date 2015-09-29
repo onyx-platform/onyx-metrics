@@ -1,9 +1,8 @@
 (ns onyx.lifecycle.metrics.websocket
   (:require [taoensso.timbre :refer [warn] :as timbre]
-            [onyx.lifecycle.metrics.common :refer [quantile]]
             [gniazdo.core :as ws]))
 
-(defn before-task [event lifecycle]
+(comment (defn before-task [event lifecycle]
   (let [conn (ws/connect (:websocket/address lifecycle))]
     {:onyx.metrics/websocket-conn conn
      :onyx.metrics/websocket-fut
@@ -108,4 +107,4 @@
 
 (def calls
   {:lifecycle/before-task-start before-task
-   :lifecycle/after-task-stop after-task})
+   :lifecycle/after-task-stop after-task}))

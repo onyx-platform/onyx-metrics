@@ -1,73 +1,104 @@
 (ns onyx.lifecycle.metrics.riemann
-  (:require [clojure.core.async :refer [chan >!! <!!]]
+  (:require [clojure.core.async :refer [chan >!! <!! dropping-buffer]]
             [riemann.client :as r]
             [taoensso.timbre :refer [info warn fatal]]
-            [onyx.lifecycle.metrics.common :refer [quantile]]))
+            [onyx.lifecycle.metrics.metrics :as metrics]
+            [interval-metrics.core :as im]))
 
-(defn start-riemann-sender [address port riemann-timeout ch]
+(defn start-riemann-sender [address port send-timeout ch]
   (future
     (let [client (r/tcp-client {:host address :port port})]
       (loop []
-        (try
-          (when-let [event (<!! ch)]
-            (when-not (-> client 
-                          (r/send-event event)
-                          (deref riemann-timeout ::timeout))
-              (info "Client send timed out. " event)))
-          (catch InterruptedException e
-            ;; Intentionally pass.
-            )
-          (catch Throwable e
-            (warn e)))
+        (when-let [event (<!! ch)]
+          (try
+            (info "Trying to send " event)
+            ;@(r/send-event client event)
+            (catch InterruptedException e
+              ;; Intentionally pass.
+              )
+            (catch Throwable e
+              ;; Retry message
+              ;; Replace with core.async offer when it is part of core.async
+              ;; If the metrics buffer is already full then there's no point adding to the problem
+              (>!! ch event)
+              (warn e))))
         (recur)))))
 
+(def historical-throughput-max-count 1000)
+(def latency-period 10)
+
 (defn before-task [event {:keys [riemann/address riemann/port] :as lifecycle}]
-  (let [ch (chan (or (:riemann/buffer-capacity lifecycle) 10000))
-        riemann-timeout (or (:riemann/send-timeout lifecycle) 5000)]
-    {:onyx.metrics/sender-thread (start-riemann-sender address port riemann-timeout ch)
-     :onyx.metrics/riemann-fut
+  ;; Dropping is better than blocking and the metrics timings going awry
+  (let [ch (chan (dropping-buffer (or (:riemann/buffer-capacity lifecycle) 10000)))
+        riemann-send-timeout (or (:riemann/send-timeout lifecycle) 5000)
+        throughputs (atom (list))
+        metrics (metrics/build-metrics)]
+    {:onyx.metrics.riemann/metrics metrics
+     :onyx.metrics.riemann/sender-thread (start-riemann-sender address port riemann-send-timeout ch)
+     :onyx.metrics.riemann/riemann-fut
      (future
-       (try
-         (loop []
-           (Thread/sleep (:riemann/interval-ms lifecycle))
-           (let [state @(:onyx.metrics/state event)
-                 name (str (:riemann/workflow-name lifecycle))
+       (loop [cycle-count 0]
+         (try
+           (Thread/sleep 1000)
+           (let [name (str (:riemann/workflow-name lifecycle))
                  task-name (str (:onyx.core/task event))]
              (assert task-name ":riemann/workflow-name must be defined")
-             (when-let [throughput (:throughput state)]
+
+             (let [throughput (im/snapshot! (:rate metrics))
+                   throughputs-val (swap! throughputs (fn [tps]
+                                                        (conj (take (dec historical-throughput-max-count) 
+                                                                    tps)
+                                                              throughput)))] 
+
                (>!! ch {:service (format "[%s] 1s_throughput" task-name)
-                        :state "ok" :metric (apply + (map #(apply + %) (take 1 throughput)))
+                        :state "ok" :metric (apply + (take 1 throughputs-val))
                         :tags ["throughput_1s" "onyx" task-name name]})
 
                (>!! ch {:service (format "[%s] 10s_throughput" task-name)
-                        :state "ok" :metric (apply + (map #(apply + %) (take 10 throughput)))
+                        :state "ok" :metric (apply + (take 10 throughputs-val))
                         :tags ["throughput_10s" "onyx" task-name name]})
 
                (>!! ch {:service (format "[%s] 60s_throughput" task-name)
-                        :state "ok" :metric (apply + (map #(apply + %) (take 60 throughput)))
+                        :state "ok" :metric (apply + (take 60 throughputs-val))
                         :tags ["throughput_60s" "onyx" task-name name]}))
-             (when-let [latency (:latency state)]
-               (>!! ch {:service (format "[%s] 50_percentile_latency" task-name)
-                        :state "ok" :metric (quantile 0.50 (apply concat (take 10 latency)))
-                        :tags ["latency_50th" "onyx" "50_percentile" task-name name]})
 
-               (>!! ch {:service (format "[%s] 90_percentile_latency" task-name)
-                        :state "ok" :metric (quantile 0.90 (apply concat (take 10 latency)))
-                        :tags ["latency_90th" "onyx" task-name name]})
+             (when (= cycle-count latency-period)
+               (when-let [rate+latency (:rate+latency-10s metrics)]
+                 (let [latency-snapshot (im/snapshot! rate+latency) 
+                       latencies-vals (->> latency-snapshot 
+                                           :latencies
+                                           (map (juxt key (fn [kv] 
+                                                            (float (/ (val kv) 1000000.0)))))
+                                           (into {}))]
+                   (>!! ch {:service (format "[%s] 50_percentile_latency" task-name)
+                            :state "ok" :metric (get latencies-vals 0.5)
+                            :tags ["latency_50th" "onyx" "50_percentile" task-name name]})
 
-               (>!! ch {:service (format "[%s] 99_percentile_latency" task-name)
-                        :state "ok" :metric (quantile 0.99 (apply concat (take 10 latency)))
-                        :tags ["latency_99th" "onyx" task-name name]}))
-             (recur)))
-         (catch InterruptedException e)
-         (catch Throwable e
-           (fatal e))))}))
+                   (>!! ch {:service (format "[%s] 90_percentile_latency" task-name)
+                            :state "ok" :metric (get latencies-vals 0.90)
+                            :tags ["latency_90th" "onyx" task-name name]})
+
+                   (>!! ch {:service (format "[%s] 99_percentile_latency" task-name)
+                            :state "ok" :metric (get latencies-vals 0.99)
+                            :tags ["latency_99th" "onyx" task-name name]})
+
+                   (>!! ch {:service (format "[%s] 99.9_percentile_latency" task-name)
+                            :state "ok" :metric (get latencies-vals 0.999)
+                            :tags ["latency_99.9th" "onyx" task-name name]})))))
+           (catch InterruptedException e)
+           (catch Throwable e
+             (fatal e)))
+         (recur (mod (inc cycle-count) latency-period))))}))
 
 (defn after-task [event lifecycle]
-  (future-cancel (:onyx.metrics/riemann-fut event))
-  (future-cancel (:onyx.metrics/sender-thread event))
+  (future-cancel (:onyx.metrics.riemann/riemann-fut event))
+  (future-cancel (:onyx.metrics.riemann/sender-thread event))
   {})
 
 (def calls
   {:lifecycle/before-task-start before-task
+   :lifecycle/after-ack-segment (metrics/build-on-completion :onyx.metrics.riemann/metrics)
+   :lifecycle/after-retry-segment (metrics/build-on-retry :onyx.metrics.timbre/metrics) 
+   :lifecycle/before-batch (metrics/build-before-batch :onyx.metrics.riemann/metrics)
+   :lifecycle/after-batch (metrics/build-after-batch :onyx.metrics.riemann/metrics)
    :lifecycle/after-task-stop after-task})

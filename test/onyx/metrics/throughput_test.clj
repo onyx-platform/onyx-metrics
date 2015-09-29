@@ -2,9 +2,9 @@
   (:require [clojure.core.async :refer [chan >!! <!! close! sliding-buffer]]
             [midje.sweet :refer :all]
             [onyx.plugin.core-async :refer [take-segments!]]
-            [onyx.lifecycle.metrics.throughput]
-            [onyx.lifecycle.metrics.latency]
+            [onyx.lifecycle.metrics.metrics]
             [onyx.lifecycle.metrics.timbre]
+            [onyx.lifecycle.metrics.riemann]
             [onyx.lifecycle.metrics.websocket]
             [onyx.api]))
 
@@ -28,7 +28,7 @@
 
 (def peer-group (onyx.api/start-peer-group peer-config))
 
-(def n-messages 100)
+(def n-messages 1000000)
 
 (def batch-size 20)
 
@@ -81,19 +81,15 @@
    {:lifecycle/task :in
     :lifecycle/calls :onyx.plugin.core-async/reader-calls}
 
-   {:lifecycle/task :inc
-    :lifecycle/calls :onyx.lifecycle.metrics.throughput/calls
-    :throughput/retention-ms 60000
+   #_{:lifecycle/task :all
+    :lifecycle/calls :onyx.lifecycle.metrics.riemann/calls
+    :riemann/address "192.168.99.100"
+    :riemann/port 5555
+    :riemann/buffer-capacity 10000
     :lifecycle/doc "Instruments a task's throughput metrics"}
 
-   {:lifecycle/task :inc
-    :lifecycle/calls :onyx.lifecycle.metrics.latency/calls
-    :latency/retention-ms 60000
-    :lifecycle/doc "Instruments a task's latency metrics per batch"}
-
-   {:lifecycle/task :inc
+   {:lifecycle/task :all
     :lifecycle/calls :onyx.lifecycle.metrics.timbre/calls
-    :timbre/interval-ms 2000
     :lifecycle/doc "Prints task metrics to Timbre every 2000 ms"}
 
    {:lifecycle/task :out
@@ -104,9 +100,6 @@
 (doseq [n (range n-messages)]
   (>!! in-chan {:n n}))
 
-(>!! in-chan :done)
-(close! in-chan)
-
 (def v-peers (onyx.api/start-peers 3 peer-group))
 
 (onyx.api/submit-job
@@ -115,6 +108,10 @@
   :workflow workflow
   :lifecycles lifecycles
   :task-scheduler :onyx.task-scheduler/balanced})
+
+(Thread/sleep 5000)
+(>!! in-chan :done)
+(close! in-chan)
 
 (def results (take-segments! out-chan))
 
