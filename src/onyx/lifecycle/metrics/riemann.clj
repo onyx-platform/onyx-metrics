@@ -11,8 +11,15 @@
       (loop []
         (when-let [event (<!! ch)]
           (try
-            (info "Trying to send " event)
-            ;@(r/send-event client event)
+            (when-not (= ::timeout 
+                         (-> client 
+                             (r/send-event event)
+                             (deref send-timeout ::timeout)))
+              ;; Retry message
+              ;; Replace with core.async offer when it is part of core.async
+              ;; If the metrics buffer is already full then there's no point adding to the problem
+              (>!! ch event)
+              (info "Riemann metrics: client send timed out. " event))
             (catch InterruptedException e
               ;; Intentionally pass.
               )
@@ -37,9 +44,10 @@
      :onyx.metrics.riemann/sender-thread (start-riemann-sender address port riemann-send-timeout ch)
      :onyx.metrics.riemann/riemann-fut
      (future
-       (loop [cycle-count 0 sleep-time 1000]
-         (let [time-start (System/currentTimeMillis)]
-           (try
+
+       (try
+         (loop [cycle-count 0 sleep-time 1000]
+           (let [time-start (System/currentTimeMillis)]
              (Thread/sleep sleep-time)
              (let [name (str (:riemann/workflow-name lifecycle))
                    task-name (str (:onyx.core/task event))]
@@ -62,6 +70,11 @@
                  (>!! ch {:service (format "[%s] 60s_throughput" task-name)
                           :state "ok" :metric (apply + (take 60 throughputs-val))
                           :tags ["throughput_60s" "onyx" task-name name]}))
+
+               (let [retry-rate-val (im/snapshot! (:retry-rate metrics))]
+                 (>!! ch {:service (format "[%s] 1s_retries-rate" task-name)
+                          :state "ok" :metric retry-rate-val 
+                          :tags ["retries_1s" "onyx" task-name name]}))
 
                (when (= cycle-count 0)
                  (when-let [rate+latency (:rate+latency-10s metrics)]
@@ -86,11 +99,11 @@
                      (>!! ch {:service (format "[%s] 99.9_percentile_latency" task-name)
                               :state "ok" :metric (get latencies-vals 0.999)
                               :tags ["latency_99.9th" "onyx" task-name name]})))))
-             (catch InterruptedException e)
-             (catch Throwable e
-               (fatal e)))
-           (recur (mod (inc cycle-count) latency-period-secs)
-                  (max 0 (- 1000 (- (System/currentTimeMillis) time-start)))))))}))
+             (recur (mod (inc cycle-count) latency-period-secs)
+                    (max 0 (- 1000 (- (System/currentTimeMillis) time-start))))))
+         (catch InterruptedException e)
+         (catch Throwable e
+           (fatal e))))}))
 
 (defn after-task [event lifecycle]
   (future-cancel (:onyx.metrics.riemann/riemann-fut event))
