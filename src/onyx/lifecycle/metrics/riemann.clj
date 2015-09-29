@@ -37,58 +37,60 @@
      :onyx.metrics.riemann/sender-thread (start-riemann-sender address port riemann-send-timeout ch)
      :onyx.metrics.riemann/riemann-fut
      (future
-       (loop [cycle-count 0]
-         (try
-           (Thread/sleep 1000)
-           (let [name (str (:riemann/workflow-name lifecycle))
-                 task-name (str (:onyx.core/task event))]
-             (assert task-name ":riemann/workflow-name must be defined")
+       (loop [cycle-count 0 sleep-time 1000]
+         (let [time-start (System/currentTimeMillis)]
+           (try
+             (Thread/sleep sleep-time)
+             (let [name (str (:riemann/workflow-name lifecycle))
+                   task-name (str (:onyx.core/task event))]
+               (assert task-name ":riemann/workflow-name must be defined")
 
-             (let [throughput (im/snapshot! (:rate metrics))
-                   throughputs-val (swap! throughputs (fn [tps]
-                                                        (conj (take (dec historical-throughput-max-count) 
-                                                                    tps)
-                                                              throughput)))] 
+               (let [throughput (im/snapshot! (:rate metrics))
+                     throughputs-val (swap! throughputs (fn [tps]
+                                                          (conj (take (dec historical-throughput-max-count) 
+                                                                      tps)
+                                                                throughput)))] 
 
-               (>!! ch {:service (format "[%s] 1s_throughput" task-name)
-                        :state "ok" :metric (apply + (take 1 throughputs-val))
-                        :tags ["throughput_1s" "onyx" task-name name]})
+                 (>!! ch {:service (format "[%s] 1s_throughput" task-name)
+                          :state "ok" :metric (apply + (take 1 throughputs-val))
+                          :tags ["throughput_1s" "onyx" task-name name]})
 
-               (>!! ch {:service (format "[%s] 10s_throughput" task-name)
-                        :state "ok" :metric (apply + (take 10 throughputs-val))
-                        :tags ["throughput_10s" "onyx" task-name name]})
+                 (>!! ch {:service (format "[%s] 10s_throughput" task-name)
+                          :state "ok" :metric (apply + (take 10 throughputs-val))
+                          :tags ["throughput_10s" "onyx" task-name name]})
 
-               (>!! ch {:service (format "[%s] 60s_throughput" task-name)
-                        :state "ok" :metric (apply + (take 60 throughputs-val))
-                        :tags ["throughput_60s" "onyx" task-name name]}))
+                 (>!! ch {:service (format "[%s] 60s_throughput" task-name)
+                          :state "ok" :metric (apply + (take 60 throughputs-val))
+                          :tags ["throughput_60s" "onyx" task-name name]}))
 
-             (when (= cycle-count latency-period-secs)
-               (when-let [rate+latency (:rate+latency-10s metrics)]
-                 (let [latency-snapshot (im/snapshot! rate+latency) 
-                       latencies-vals (->> latency-snapshot 
-                                           :latencies
-                                           (map (juxt key (fn [kv] 
-                                                            (float (/ (val kv) 1000000.0)))))
-                                           (into {}))]
-                   (>!! ch {:service (format "[%s] 50_percentile_latency" task-name)
-                            :state "ok" :metric (get latencies-vals 0.5)
-                            :tags ["latency_50th" "onyx" "50_percentile" task-name name]})
+               (when (= cycle-count 0)
+                 (when-let [rate+latency (:rate+latency-10s metrics)]
+                   (let [latency-snapshot (im/snapshot! rate+latency) 
+                         latencies-vals (->> latency-snapshot 
+                                             :latencies
+                                             (map (juxt key (fn [kv] 
+                                                              (float (/ (val kv) 1000000.0)))))
+                                             (into {}))]
+                     (>!! ch {:service (format "[%s] 50_percentile_latency" task-name)
+                              :state "ok" :metric (get latencies-vals 0.5)
+                              :tags ["latency_50th" "onyx" "50_percentile" task-name name]})
 
-                   (>!! ch {:service (format "[%s] 90_percentile_latency" task-name)
-                            :state "ok" :metric (get latencies-vals 0.90)
-                            :tags ["latency_90th" "onyx" task-name name]})
+                     (>!! ch {:service (format "[%s] 90_percentile_latency" task-name)
+                              :state "ok" :metric (get latencies-vals 0.90)
+                              :tags ["latency_90th" "onyx" task-name name]})
 
-                   (>!! ch {:service (format "[%s] 99_percentile_latency" task-name)
-                            :state "ok" :metric (get latencies-vals 0.99)
-                            :tags ["latency_99th" "onyx" task-name name]})
+                     (>!! ch {:service (format "[%s] 99_percentile_latency" task-name)
+                              :state "ok" :metric (get latencies-vals 0.99)
+                              :tags ["latency_99th" "onyx" task-name name]})
 
-                   (>!! ch {:service (format "[%s] 99.9_percentile_latency" task-name)
-                            :state "ok" :metric (get latencies-vals 0.999)
-                            :tags ["latency_99.9th" "onyx" task-name name]})))))
-           (catch InterruptedException e)
-           (catch Throwable e
-             (fatal e)))
-         (recur (mod (inc cycle-count) latency-period))))}))
+                     (>!! ch {:service (format "[%s] 99.9_percentile_latency" task-name)
+                              :state "ok" :metric (get latencies-vals 0.999)
+                              :tags ["latency_99.9th" "onyx" task-name name]})))))
+             (catch InterruptedException e)
+             (catch Throwable e
+               (fatal e)))
+           (recur (mod (inc cycle-count) latency-period-secs)
+                  (max 0 (- 1000 (- (System/currentTimeMillis) time-start)))))))}))
 
 (defn after-task [event lifecycle]
   (future-cancel (:onyx.metrics.riemann/riemann-fut event))

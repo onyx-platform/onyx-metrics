@@ -81,14 +81,14 @@
    {:lifecycle/task :in
     :lifecycle/calls :onyx.plugin.core-async/reader-calls}
 
-   #_{:lifecycle/task :all
+   {:lifecycle/task :all
     :lifecycle/calls :onyx.lifecycle.metrics.riemann/calls
     :riemann/address "192.168.99.100"
     :riemann/port 5555
     :riemann/buffer-capacity 10000
     :lifecycle/doc "Instruments a task's throughput metrics"}
 
-   {:lifecycle/task :all
+   {:lifecycle/task :in
     :lifecycle/calls :onyx.lifecycle.metrics.timbre/calls
     :lifecycle/doc "Prints task metrics to Timbre every 2000 ms"}
 

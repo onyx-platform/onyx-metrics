@@ -30,7 +30,7 @@
           latency (- timestamp @batch-start)
           batch (:onyx.core/batch event)
           map-timings-transducer (map (fn [v] (clojure.lang.MapEntry. (:id v) timestamp)))]
-      (swap! completion-tracking into map-timings-transducer batch)
+      ;(swap! completion-tracking into map-timings-transducer batch)
       (im/update! rate (count batch))
       (im/update! rate+latency-10s latency)
       {})))
