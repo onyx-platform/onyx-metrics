@@ -1,16 +1,19 @@
 (ns onyx.lifecycle.metrics.riemann
   (:require [clojure.core.async :refer [chan >!! <!!]]
             [riemann.client :as r]
-            [taoensso.timbre :refer [warn fatal]]
+            [taoensso.timbre :refer [info warn fatal]]
             [onyx.lifecycle.metrics.common :refer [quantile]]))
 
-(defn start-riemann-sender [address port ch]
+(defn start-riemann-sender [address port riemann-timeout ch]
   (future
     (let [client (r/tcp-client {:host address :port port})]
       (loop []
         (try
           (when-let [event (<!! ch)]
-            @(r/send-event client event))
+            (when-not (-> client 
+                          (r/send-event event)
+                          (deref riemann-timeout ::timeout))
+              (info "Client send timed out. " event)))
           (catch InterruptedException e
             ;; Intentionally pass.
             )
@@ -19,8 +22,9 @@
         (recur)))))
 
 (defn before-task [event {:keys [riemann/address riemann/port] :as lifecycle}]
-  (let [ch (chan (or (:riemann/buffer-capacity lifecycle) 10000))]
-    {:onyx.metrics/sender-thread (start-riemann-sender address port ch)
+  (let [ch (chan (or (:riemann/buffer-capacity lifecycle) 10000))
+        riemann-timeout (or (:riemann/send-timeout lifecycle) 5000)]
+    {:onyx.metrics/sender-thread (start-riemann-sender address port riemann-timeout ch)
      :onyx.metrics/riemann-fut
      (future
        (try
