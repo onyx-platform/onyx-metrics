@@ -1,4 +1,4 @@
-(ns onyx.metrics.throughput-test
+(ns onyx.metrics.send-test
   (:require [clojure.core.async :refer [chan >!! <!! close! sliding-buffer]]
             [clojure.test :refer [deftest is testing]]
             [onyx.plugin.core-async :refer [take-segments!]]
@@ -98,7 +98,7 @@
                                :riemann/address "localhost"
                                :riemann/port 12201
                                :metrics/sender-fn sender
-                               :lifecycle/doc "Instruments a task's throughput metrics"}
+                               :lifecycle/doc "Instruments a task's metrics"}
 
                               {:lifecycle/task :out
                                :lifecycle/calls ::out-calls}
