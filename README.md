@@ -7,69 +7,23 @@ Onyx Lifecycle plugin for instrumenting workflows. Track throughput and metrics 
 In your project file:
 
 ```clojure
-[org.onyxplatform/onyx-metrics "0.7.5"]
+[org.onyxplatform/onyx-metrics "0.7.10-SNAPSHOT"]
 ```
 
-In your peer boot-up namespace:
+#### Metrics
 
-```clojure
-(:require [onyx.lifecycle.metrics.throughput]
-          [onyx.lifecycle.metrics.latency]
-          [onyx.lifecycle.metrics.timbre]
-          [onyx.lifecycle.metrics.websocket]
-          [onyx.lifecycle.metrics.riemann])
-```
+Computes the following metrics.
+* 1s, 10s, 60s throughput
+* 50th, 90th, 99th, 99.9th percentile batch latency (time to process a batch, computed every 10s)
+* 1s input segment retries (input segments that have not been processed within :onyx/pending-timeout)
+* 50th, 90th, 99th, 99.9th percentile input segment completed latency (time to full process an input segment through the DAG, computed every 10s)
 
 #### Lifecycle entries
 
 Add these maps to your `:lifecycles` vector in the argument to `:onyx.api/submit-job`.
 
-##### Throughput
 
-Computes throughput in terms of segments per second for 10s, 30s, and 60s windows.
-
-```clojure
-{:lifecycle/task :my-task-name
- :lifecycle/calls :onyx.lifecycle.metrics.throughput/calls
- :throughput/retention-ms 60000
- :lifecycle/doc "Instruments a task's throughput metrics"}
-```
-
-##### Batch Latency
-
-Computes the 50th, 90th, and 99th percentile latency in milliseconds per batch of segments for 10s, 30s, and 60s windows.
-
-```clojure
-{:lifecycle/task :my-task-name
- :lifecycle/calls :onyx.lifecycle.metrics.latency/calls
- :latency/retention-ms 60000
- :lifecycle/doc "Instruments a task's latency metrics per batch"}
-```
-
-##### Timbre Logging
-
-Logs all statistics collected to Timbre.
-
-```clojure
-{:lifecycle/task :my-task-name
- :lifecycle/calls :onyx.lifecycle.metrics.timbre/calls
- :timbre/interval-ms 2000
- :lifecycle/doc "Prints task metrics to Timbre every 2000 ms"}
-```
-
-#### Websocket output
-
-Sends all metric data to a websocket. The Onyx dashboard already knows what to do with this output, but you can direct it anywhere.
-
-```clojure
-{:lifecycle/task task
- :lifecycle/calls :onyx.lifecycle.metrics.websocket/calls
- :websocket/address "ws://127.0.0.1:3000/metrics"
- :websocket/interval-ms 2000
- :lifecycle/doc "Sends metric data to a websocket."}
-```
-
-#### Riemann output
+##### Riemann metrics
 
 
 Send all metrics to a Riemann instance on a single thread. Events are buffered in a core.async channel with capacity `:riemann/buffer-capacity`, default capacity is 10,000.
@@ -77,44 +31,78 @@ Send all metrics to a Riemann instance on a single thread. Events are buffered i
 First, add the clojure riemann client dependency to your project. e.g.
 ```clojure
 [riemann-clojure-client "0.4.1"]
-```
-Then setup the lifecycles:
+
+
+In your peer boot-up namespace:
 
 ```clojure
-{:lifecycle/task task
- :lifecycle/calls :onyx.lifecycle.metrics.riemann/calls
- :riemann/workflow-name workflow-name ;; An extra tag for riemann, in order to namespace multiple running Onyx jobs.
- :riemann/address "192.168.99.100"
- :riemann/port 5555
- :riemann/interval-ms 1000
- :riemann/buffer-capacity 10000}
+(:require [onyx.lifecycle.metrics.metrics]
+          [onyx.lifecycle.metrics.riemann])
 ```
+
+```clojure
+
+{:lifecycle/task :all ; or :task-name for an individual task
+ :lifecycle/calls :onyx.lifecycle.metrics.metrics/calls
+ :metrics/buffer-capacity 10000
+ :metrics/workflow-name "your-workflow-name"
+ :metrics/sender-fn :onyx.lifecycle.metrics.riemann/riemann-sender
+ :riemann/address "192.168.1.23"
+ :riemann/port 5555
+ :lifecycle/doc "Instruments a task's metrics and sends via riemann"}
+
+```
+
+##### Timbre Logging
+
+Computes the following metrics and logs via timbre.
+
+In your peer boot-up namespace:
+
+```clojure
+(:require [onyx.lifecycle.metrics.timbre]
+          [onyx.lifecycle.metrics.metrics])
+```
+
+Add the following lifecycle.
+
+```clojure
+
+{:lifecycle/task :all ; or :task-name for an individual task
+ :lifecycle/calls :onyx.lifecycle.metrics.metrics/calls
+ :metrics/buffer-capacity 10000
+ :metrics/workflow-name "your-workflow-name"
+ :metrics/sender-fn :onyx.lifecycle.metrics.timbre/timbre-sender
+ :lifecycle/doc "Instruments a task's metrics to timbre"}
+```
+
+#### Websocket output
+
+Sends all metric data to a websocket. The Onyx dashboard already knows what to do with this output, but you can direct it anywhere.
+
+In your peer boot-up namespace:
+
+```clojure
+(:require [onyx.lifecycle.metrics.websocket]
+          [onyx.lifecycle.metrics.metrics])
+```
+
+Add the following lifecycle.
+
+
+```clojure
+{:lifecycle/task :all ; or :task-name for an individual task
+ :lifecycle/calls :onyx.lifecycle.metrics.websocket/calls
+ :websocket/address "ws://127.0.0.1:3000/metrics"
+ :lifecycle/doc "Instruments a task's metrics to a websocket."}
+```
+
+
+### Handy Tip
 
 Sometimes, you may want a quick way to instrument all the tasks in a workflow.
-This can be achieved using something like this.
+This can be achieved by using :lifecycle/task :all for your given lifecycles.
 
-```clojure
-
-(defn add-metrics [lifecycle workflow retention-ms reporting-ms riemann-hostname riemann-port riemann-name]
-  (let [tasks (distinct (flatten denver-health-workflow))]
-    (-> (reduce (fn [acc x]
-      (conj acc
-            {:lifecycle/task x
-             :lifecycle/calls :onyx.lifecycle.metrics.throughput/calls
-             :throughput/retention-ms (or retention-ms 60000)}
-
-            {:lifecycle/task x
-             :lifecycle/calls :onyx.lifecycle.metrics.latency/calls
-             :latency/retention-ms (or retention-ms 60000)}
-
-            {:lifecycle/task x
-             :lifecycle/calls :onyx.lifecycle.metrics.riemann/calls
-             :riemann/interval-ms (or reporting-ms 1000)
-             :riemann/workflow-name riemann-name
-             :riemann/address riemann-hostname
-	     :riemann/port riemann-port})) [] tasks)
-       (concat lifecycle))))
-```
 
 ## License
 
