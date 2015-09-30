@@ -38,25 +38,3 @@
                 (>!! ch metric-msg)
                 (warn e)))))
         (recur)))))
-
-(defn start-timbre-sender [ch]
-  (future
-    (loop []
-      (when-let [metric-msg (<!! ch)]
-        (try
-          (info "Metrics: " metric-msg)
-          (catch InterruptedException e
-            ;; Intentionally pass.
-            )))
-      (recur))))
-
-; (defn start-websocket-sender [ch]
-;   (future
-;     (loop []
-;       (when-let [metric-msg (<!! ch)]
-;         (try
-;           (ws/send-msg conn (pr-str metric-msg))
-;           (catch InterruptedException e
-;             ;; Intentionally pass.
-;             )))
-;       (recur))))

@@ -1,140 +1,126 @@
 (ns onyx.metrics.throughput-test
   (:require [clojure.core.async :refer [chan >!! <!! close! sliding-buffer]]
-            [midje.sweet :refer :all]
+            [clojure.test :refer [deftest is testing]]
             [onyx.plugin.core-async :refer [take-segments!]]
+            [onyx.test-helper :refer [with-test-env add-test-env-peers!]]
+            [riemann.client]
+            [gniazdo.core]
+            [taoensso.timbre :refer [info warn fatal]]
             [onyx.lifecycle.metrics.metrics]
             [onyx.lifecycle.metrics.timbre]
             [onyx.lifecycle.metrics.riemann]
             [onyx.lifecycle.metrics.websocket]
             [onyx.api]))
 
-(def id (java.util.UUID/randomUUID))
-
-(def env-config
-  {:zookeeper/address "127.0.0.1:2188"
-   :zookeeper/server? true
-   :zookeeper.server/port 2188
-   :onyx/id id})
-
-(def peer-config
-  {:zookeeper/address "127.0.0.1:2188"
-   :onyx/id id
-   :onyx.peer/job-scheduler :onyx.job-scheduler/greedy
-   :onyx.messaging/impl :aeron
-   :onyx.messaging/allow-short-circuit? true
-   :onyx.messaging/peer-port-range [40200 40260]
-   :onyx.messaging/bind-addr "localhost"})
-
-(def env (onyx.api/start-env env-config))
-
-(def peer-group (onyx.api/start-peer-group peer-config))
-
 (def n-messages 100000)
-
-(def batch-size 20)
 
 (defn my-inc [{:keys [n] :as segment}]
   (assoc segment :n (inc n)))
 
-(def catalog
-  [{:onyx/name :in
-    :onyx/plugin :onyx.plugin.core-async/input
-    :onyx/type :input
-    :onyx/medium :core.async
-    :onyx/batch-size batch-size
-    :onyx/max-peers 1
-    :onyx/doc "Reads segments from a core.async channel"}
+(deftest metrics-test
+  (doseq [sender [:onyx.lifecycle.metrics.websocket/websocket-sender
+                  ;; cannot test timbre-sender as info is a macro?
+                  ;:onyx.lifecycle.metrics.timbre/timbre-sender
+                  :onyx.lifecycle.metrics.riemann/riemann-sender]] 
 
-   {:onyx/name :inc
-    :onyx/fn :onyx.metrics.throughput-test/my-inc
-    :onyx/type :function
-    :onyx/batch-size batch-size}
+    (def in-chan (chan (inc n-messages)))
 
-   {:onyx/name :out
-    :onyx/plugin :onyx.plugin.core-async/output
-    :onyx/type :output
-    :onyx/medium :core.async
-    :onyx/batch-size batch-size
-    :onyx/max-peers 1
-    :onyx/doc "Writes segments to a core.async channel"}])
+    (def out-chan (chan (sliding-buffer (inc n-messages))))
 
-(def workflow [[:in :inc] [:inc :out]])
+    (defn inject-in-ch [event lifecycle]
+      {:core.async/chan in-chan})
 
-(def in-chan (chan (inc n-messages)))
+    (defn inject-out-ch [event lifecycle]
+      {:core.async/chan out-chan})
 
-(def out-chan (chan (sliding-buffer (inc n-messages))))
+    (def in-calls
+      {:lifecycle/before-task-start inject-in-ch})
 
-(defn inject-in-ch [event lifecycle]
-  {:core.async/chan in-chan})
+    (def out-calls
+      {:lifecycle/before-task-start inject-out-ch})
 
-(defn inject-out-ch [event lifecycle]
-  {:core.async/chan out-chan})
 
-(def in-calls
-  {:lifecycle/before-task-start inject-in-ch})
+    (let [events (atom [])] 
+      (with-redefs [riemann.client/tcp-client (fn [opts] nil)
+                    riemann.client/send-event (fn [_ event] 
+                                                (swap! events conj event)
+                                                (future :sent))
+                    ;taoensso.timbre/info (fn [& vs]
+                    ;                       (swap! events conj :print))
+                    gniazdo.core/connect (fn [_])
+                    gniazdo.core/send-msg (fn [_ v]
+                                            (swap! events conj v))] 
+        (let [id (java.util.UUID/randomUUID)
+              env-config {:zookeeper/address "127.0.0.1:2188"
+                          :zookeeper/server? true
+                          :zookeeper.server/port 2188
+                          :onyx/id id}
+              peer-config {:zookeeper/address "127.0.0.1:2188"
+                           :onyx/id id
+                           :onyx.peer/job-scheduler :onyx.job-scheduler/greedy
+                           :onyx.messaging/impl :aeron
+                           :onyx.messaging/allow-short-circuit? true
+                           :onyx.messaging/peer-port-range [40200 40260]
+                           :onyx.messaging/bind-addr "localhost"}]
+          (with-test-env [test-env [3 env-config peer-config]]
+            (let [batch-size 20
+                  catalog [{:onyx/name :in
+                            :onyx/plugin :onyx.plugin.core-async/input
+                            :onyx/type :input
+                            :onyx/medium :core.async
+                            :onyx/batch-size batch-size
+                            :onyx/max-peers 1
+                            :onyx/doc "Reads segments from a core.async channel"}
 
-(def out-calls
-  {:lifecycle/before-task-start inject-out-ch})
+                           {:onyx/name :inc
+                            :onyx/fn ::my-inc
+                            :onyx/type :function
+                            :onyx/batch-size batch-size}
 
-(def lifecycles
-  [{:lifecycle/task :in
-    :lifecycle/calls :onyx.metrics.throughput-test/in-calls}
-   {:lifecycle/task :in
-    :lifecycle/calls :onyx.plugin.core-async/reader-calls}
+                           {:onyx/name :out
+                            :onyx/plugin :onyx.plugin.core-async/output
+                            :onyx/type :output
+                            :onyx/medium :core.async
+                            :onyx/batch-size batch-size
+                            :onyx/max-peers 1
+                            :onyx/doc "Writes segments to a core.async channel"}]
+                  workflow [[:in :inc] [:inc :out]]
+                  lifecycles [{:lifecycle/task :in
+                               :lifecycle/calls ::in-calls}
+                              {:lifecycle/task :in
+                               :lifecycle/calls :onyx.plugin.core-async/reader-calls}
 
-   {:lifecycle/task :all
-    :lifecycle/calls :onyx.lifecycle.metrics.metrics/calls
-    :metrics/buffer-capacity 10000
-    :metrics/workflow-name "test-workflow"
-    :metrics/sender-fn :onyx.lifecycle.metrics.timbre/timbre-sender
-    :lifecycle/doc "Instruments a task's throughput metrics"}
+                              {:lifecycle/task :all
+                               :lifecycle/calls :onyx.lifecycle.metrics.metrics/calls
+                               :websocket/address "ws://127.0.0.1:3000/metrics"
+                               :metrics/buffer-capacity 10000
+                               :metrics/workflow-name "test-workflow"
+                               :riemann/address "localhost"
+                               :riemann/port 12201
+                               :metrics/sender-fn sender
+                               :lifecycle/doc "Instruments a task's throughput metrics"}
 
-   #_{:lifecycle/task :all
-    :lifecycle/calls :onyx.lifecycle.metrics.metrics/calls
-    :metrics/buffer-capacity 10000
-    :metrics/workflow-name "test-workflow"
-    :metrics/sender-fn :onyx.lifecycle.metrics.riemann/riemann-sender
-    :riemann/address "localhost"
-    :riemann/port 12201
-    :lifecycle/doc "Instruments a task's throughput metrics"}
+                              {:lifecycle/task :out
+                               :lifecycle/calls ::out-calls}
+                              {:lifecycle/task :out
+                               :lifecycle/calls :onyx.plugin.core-async/writer-calls}]
 
-   #_{:lifecycle/task :all
-    :lifecycle/calls :onyx.lifecycle.metrics.metrics/calls
-    :websocket/address "ws://127.0.0.1:3000/metrics"
-    :metrics/buffer-capacity 10000
-    :metrics/workflow-name "test-workflow"
-    :metrics/sender-fn :onyx.lifecycle.metrics.websocket/websocket-sender
-    :lifecycle/doc "Instruments a task's throughput metrics"}
-
-   {:lifecycle/task :out
-    :lifecycle/calls :onyx.metrics.throughput-test/out-calls}
-   {:lifecycle/task :out
-    :lifecycle/calls :onyx.plugin.core-async/writer-calls}])
-
-(doseq [n (range n-messages)]
-  (>!! in-chan {:n n}))
-
-(def v-peers (onyx.api/start-peers 3 peer-group))
-
-(onyx.api/submit-job
- peer-config
- {:catalog catalog
-  :workflow workflow
-  :lifecycles lifecycles
-  :task-scheduler :onyx.task-scheduler/balanced})
-
-(>!! in-chan :done)
-(close! in-chan)
-
-(def results (take-segments! out-chan))
-
-(let [expected (set (map (fn [x] {:n (inc x)}) (range n-messages)))]
-  (fact (set (butlast results)) => expected)
-  (fact (last results) => :done))
-
-(doseq [v-peer v-peers]
-  (onyx.api/shutdown-peer v-peer))
-
-(onyx.api/shutdown-peer-group peer-group)
-
-(onyx.api/shutdown-env env)
+                  _ (doseq [n (range n-messages)]
+                      (>!! in-chan {:n n}))
+                  _ (>!! in-chan :done)
+                  _ (close! in-chan)
+                  start-time (System/currentTimeMillis)
+                  _ (onyx.api/submit-job peer-config
+                                         {:catalog catalog
+                                          :workflow workflow
+                                          :lifecycles lifecycles
+                                          :task-scheduler :onyx.task-scheduler/balanced})
+                  results (take-segments! out-chan)
+                  end-time (System/currentTimeMillis)]
+              (let [expected (set (map (fn [x] {:n (inc x)}) (range n-messages)))]
+                (is (= expected (set (butlast results))))
+                (is (= :done (last results)))
+                (is (> (count @events) (* 3 ; number of tasks
+                                          (/ (- end-time start-time) 1000)
+                                          ;; 4 events every second + 8 events ever 10 seconds, round down a little
+                                          4.6)))))))))))
