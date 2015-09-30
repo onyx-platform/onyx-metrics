@@ -17,7 +17,7 @@ lein set-version $new_version
 lein update-dependency org.onyxplatform/onyx $new_version
 sed -i '' 's/$current_version/"$new_version"/g' README.md
 
-git commit -am "Release version $new_version."
+git commit -m "Release version $new_version." project.clj README.md 
 git tag $new_version
 git push origin $new_version
 git push origin master
