@@ -11,13 +11,13 @@
 (def id (java.util.UUID/randomUUID))
 
 (def env-config
-  {:zookeeper/address "127.0.0.1:22181"
+  {:zookeeper/address "127.0.0.1:2188"
    :zookeeper/server? true
    :zookeeper.server/port 2188
    :onyx/id id})
 
 (def peer-config
-  {:zookeeper/address "127.0.0.1:22181"
+  {:zookeeper/address "127.0.0.1:2188"
    :onyx/id id
    :onyx.peer/job-scheduler :onyx.job-scheduler/greedy
    :onyx.messaging/impl :aeron
