@@ -11,16 +11,17 @@
 (def id (java.util.UUID/randomUUID))
 
 (def env-config
-  {:zookeeper/address "127.0.0.1:2188"
+  {:zookeeper/address "127.0.0.1:22181"
    :zookeeper/server? true
    :zookeeper.server/port 2188
    :onyx/id id})
 
 (def peer-config
-  {:zookeeper/address "127.0.0.1:2188"
+  {:zookeeper/address "127.0.0.1:22181"
    :onyx/id id
    :onyx.peer/job-scheduler :onyx.job-scheduler/greedy
    :onyx.messaging/impl :aeron
+   :onyx.messaging/allow-short-circuit? true
    :onyx.messaging/peer-port-range [40200 40260]
    :onyx.messaging/bind-addr "localhost"})
 
@@ -28,7 +29,7 @@
 
 (def peer-group (onyx.api/start-peer-group peer-config))
 
-(def n-messages 100000)
+(def n-messages 10000000)
 
 (def batch-size 20)
 
@@ -81,16 +82,38 @@
    {:lifecycle/task :in
     :lifecycle/calls :onyx.plugin.core-async/reader-calls}
 
-   #_{:lifecycle/task :all
-    :lifecycle/calls :onyx.lifecycle.metrics.riemann/calls
-    :riemann/address "192.168.99.100"
-    :riemann/port 5555
-    :riemann/buffer-capacity 10000
+   {:lifecycle/task :all
+    :lifecycle/calls :onyx.lifecycle.metrics.metrics/calls
+    :metrics/buffer-capacity 10000
+    :metrics/workflow-name "test-workflow"
+    :metrics/sender-fn :onyx.lifecycle.metrics.riemann/riemann-sender
+    :riemann/address "localhost"
+    :riemann/port 12201
     :lifecycle/doc "Instruments a task's throughput metrics"}
 
-   {:lifecycle/task :in
-    :lifecycle/calls :onyx.lifecycle.metrics.timbre/calls
-    :lifecycle/doc "Prints task metrics to Timbre every 2000 ms"}
+   #_{:lifecycle/task :all
+    :lifecycle/calls :onyx.lifecycle.metrics.metrics/calls
+    :metrics/buffer-capacity 10000
+    :metrics/workflow-name "test-workflow"
+    :metrics/sender-fn :onyx.lifecycle.metrics.timbre/timbre-sender
+    :lifecycle/doc "Instruments a task's throughput metrics"}
+
+   #_{:lifecycle/task :all
+    :lifecycle/calls :onyx.lifecycle.metrics.metrics/calls
+    :websocket/address "ws://127.0.0.1:3000/metrics"
+    :metrics/buffer-capacity 10000
+    :metrics/workflow-name "test-workflow"
+    :metrics/sender-fn :onyx.lifecycle.metrics.websocket/websocket-sender
+    :lifecycle/doc "Instruments a task's throughput metrics"}
+
+   #_{:lifecycle/task :all
+    :lifecycle/calls :onyx.lifecycle.metrics.riemann/calls
+    :metrics/workflow-name "test-workflow"
+    :metrics/sender-fn :onyx.metrics.riemann/start-riemann-sender
+    :riemann/address "localhost"
+    :riemann/port 12201
+    :riemann/buffer-capacity 10000
+    :lifecycle/doc "Instruments a task's throughput metrics"}
 
    {:lifecycle/task :out
     :lifecycle/calls :onyx.metrics.throughput-test/out-calls}
@@ -109,7 +132,6 @@
   :lifecycles lifecycles
   :task-scheduler :onyx.task-scheduler/balanced})
 
-(Thread/sleep 5000)
 (>!! in-chan :done)
 (close! in-chan)
 

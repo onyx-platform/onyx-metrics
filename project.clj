@@ -14,8 +14,12 @@
   :dependencies [[org.clojure/clojure "1.7.0"]
                  [interval-metrics "1.0.0"]
                  [stylefruits/gniazdo "0.4.0"]]
+  :java-opts ^:replace ["-server" "-Xmx3g"]
+  :global-vars  {*warn-on-reflection* true 
+                 *assert* false
+                 *unchecked-math* :warn-on-boxed}
   :profiles {:dev {:dependencies [^{:voom {:repo "git@github.com:onyx-platform/onyx.git" :branch "master"}}
-                                  [org.onyxplatform/onyx "0.7.5"]
+                                  [org.onyxplatform/onyx "0.7.7-SNAPSHOT"]
                                   [org.clojure/core.async "0.1.346.0-17112a-alpha"]
                                   [riemann-clojure-client "0.4.1"]
                                   [com.taoensso/timbre "4.1.1"]
