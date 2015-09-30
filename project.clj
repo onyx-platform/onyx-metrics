@@ -1,4 +1,4 @@
-(defproject org.onyxplatform/onyx-metrics "0.7.10-SNAPSHOT"
+(defproject org.onyxplatform/onyx-metrics "0.7.10"
   :description "Instrument Onyx workflows"
   :url "https://github.com/MichaelDrogalis/onyx"
   :license {:name "Eclipse Public License"
@@ -24,4 +24,5 @@
                                   [riemann-clojure-client "0.4.1"]
                                   [com.taoensso/timbre "4.1.1"]]
                    :plugins [[lein-set-version "0.4.1"]
+                             [lein-update-dependency "0.1.2"]
                              [lein-pprint  "1.1.1"]]}})
