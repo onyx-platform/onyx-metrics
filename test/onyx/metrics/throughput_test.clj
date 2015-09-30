@@ -86,16 +86,16 @@
     :lifecycle/calls :onyx.lifecycle.metrics.metrics/calls
     :metrics/buffer-capacity 10000
     :metrics/workflow-name "test-workflow"
-    :metrics/sender-fn :onyx.lifecycle.metrics.riemann/riemann-sender
-    :riemann/address "localhost"
-    :riemann/port 12201
+    :metrics/sender-fn :onyx.lifecycle.metrics.timbre/timbre-sender
     :lifecycle/doc "Instruments a task's throughput metrics"}
 
    #_{:lifecycle/task :all
     :lifecycle/calls :onyx.lifecycle.metrics.metrics/calls
     :metrics/buffer-capacity 10000
     :metrics/workflow-name "test-workflow"
-    :metrics/sender-fn :onyx.lifecycle.metrics.timbre/timbre-sender
+    :metrics/sender-fn :onyx.lifecycle.metrics.riemann/riemann-sender
+    :riemann/address "localhost"
+    :riemann/port 12201
     :lifecycle/doc "Instruments a task's throughput metrics"}
 
    #_{:lifecycle/task :all
@@ -104,15 +104,6 @@
     :metrics/buffer-capacity 10000
     :metrics/workflow-name "test-workflow"
     :metrics/sender-fn :onyx.lifecycle.metrics.websocket/websocket-sender
-    :lifecycle/doc "Instruments a task's throughput metrics"}
-
-   #_{:lifecycle/task :all
-    :lifecycle/calls :onyx.lifecycle.metrics.riemann/calls
-    :metrics/workflow-name "test-workflow"
-    :metrics/sender-fn :onyx.metrics.riemann/start-riemann-sender
-    :riemann/address "localhost"
-    :riemann/port 12201
-    :riemann/buffer-capacity 10000
     :lifecycle/doc "Instruments a task's throughput metrics"}
 
    {:lifecycle/task :out
