@@ -123,4 +123,4 @@
                 (is (> (count @events) (* 3 ; number of tasks
                                           (/ (- end-time start-time) 1000)
                                           ;; 4 events every second + 8 events ever 10 seconds, round down a little
-                                          4.6)))))))))))
+                                          4.4)))))))))))
