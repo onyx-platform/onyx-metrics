@@ -49,7 +49,7 @@
                                                         (conj (take (dec historical-throughput-max-count) 
                                                                     tps)
                                                               throughput)))] 
-               (>!! ch (merge core {:service (format "[%s] 1s_throughput [%s]" task-name peer-id)
+               (>!! ch (merge core {:service (format "[%s.%s] 1s_throughput" task-name peer-id)
                                     :window "1s"
                                     :metric :throughput
                                     :value (apply + (remove nil? (take 1 throughputs-val)))
