@@ -20,9 +20,7 @@
                  *unchecked-math* :warn-on-boxed}
   :profiles {:dev {:dependencies [^{:voom {:repo "git@github.com:onyx-platform/onyx.git" :branch "master"}}
                                   [org.onyxplatform/onyx "0.8.0"]
-                                  [org.clojure/core.async "0.1.346.0-17112a-alpha"]
-                                  [riemann-clojure-client "0.4.1"]
-                                  [com.taoensso/timbre "4.1.1"]]
+                                  [riemann-clojure-client "0.4.1"]]
                    :plugins [[lein-set-version "0.4.1"]
                              [lein-update-dependency "0.1.2"]
                              [lein-pprint "1.1.1"]]}})
