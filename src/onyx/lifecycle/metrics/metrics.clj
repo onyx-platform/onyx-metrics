@@ -30,10 +30,11 @@
         metrics (->Metrics rate batch-start rate+latency-10s retry-rate (atom {}) completion-rate+latencies-10s)
         name (str (:metrics/workflow-name lifecycle))
         task-name (str (:onyx.core/task event))
+        peer-id (:onyx.core/id event)
         core {:job-id (:onyx.core/job-id event)
               :task-id (:onyx.core/task-id event)
               :task-name (:onyx.core/task event)
-              :peer-id (:onyx.core/id event)}]
+              :peer-id peer-id}]
 
     {:onyx.metrics.metrics/metrics metrics
      :onyx.metrics.metrics/sender-thread ((kw->fn (:metrics/sender-fn lifecycle)) lifecycle ch)
@@ -48,7 +49,7 @@
                                                         (conj (take (dec historical-throughput-max-count) 
                                                                     tps)
                                                               throughput)))] 
-               (>!! ch (merge core {:service (format "[%s] 1s_throughput" task-name)
+               (>!! ch (merge core {:service (format "[%s] 1s_throughput [%s]" task-name peer-id)
                                     :window "1s"
                                     :metric :throughput
                                     :value (apply + (remove nil? (take 1 throughputs-val)))
