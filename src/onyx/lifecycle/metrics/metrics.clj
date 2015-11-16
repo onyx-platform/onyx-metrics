@@ -53,7 +53,7 @@
                                     :window "1s"
                                     :metric :throughput
                                     :value (apply + (remove nil? (take 1 throughputs-val)))
-                                    :tags ["throughput_1s" "onyx" task-name name]}))
+                                    :tags ["throughput_1s" "onyx" task-name name (str peer-id)]}))
 
                (>!! ch (merge core {:service (format "[%s] 10s_throughput" task-name)
                                     :window "10s"
