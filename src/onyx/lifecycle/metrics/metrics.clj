@@ -164,7 +164,7 @@
           batch (:onyx.core/batch event)]
       (when (= (:onyx/type (:onyx.core/task-map event)) :input)
         (let [transducer (map (fn [v] (clojure.lang.MapEntry. (:id v) timestamp)))]
-          (swap! completion-tracking into map-timings-transducer batch)))
+          (swap! completion-tracking into transducer batch)))
       (im/update! rate (count batch))
       (im/update! rate+latency-10s latency)
       {}))
