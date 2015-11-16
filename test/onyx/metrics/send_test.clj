@@ -60,7 +60,7 @@
                            :onyx.peer/job-scheduler :onyx.job-scheduler/greedy
                            :onyx.messaging/impl :aeron
                            :onyx.messaging/allow-short-circuit? true
-                           :onyx.messaging/peer-port-range [40200 40260]
+                           :onyx.messaging/peer-port 40200
                            :onyx.messaging/bind-addr "localhost"}]
           (with-test-env [test-env [3 env-config peer-config]]
             (let [batch-size 20

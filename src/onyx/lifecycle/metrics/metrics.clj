@@ -11,7 +11,6 @@
 (defrecord Metrics [rate batch-start rate+latency-10s retry-rate completion-tracking completion-rate+latencies-10s])
 
 (defn before-task [event lifecycle]
-
   (when (:onyx.metrics.metrics/metrics event)
     (throw (ex-info "Only one metrics lifecyle is supported per task." lifecycle)))
 
@@ -162,9 +161,10 @@
     (let [{:keys [rate batch-start rate+latency-10s completion-tracking]} (:onyx.metrics.metrics/metrics event)
           timestamp (System/nanoTime)
           latency (- timestamp @batch-start)
-          batch (:onyx.core/batch event)
-          map-timings-transducer (map (fn [v] (clojure.lang.MapEntry. (:id v) timestamp)))]
-      (swap! completion-tracking into map-timings-transducer batch)
+          batch (:onyx.core/batch event)]
+      (when (= (:onyx/type (:onyx.core/task-map event)) :input)
+        (let [transducer (map (fn [v] (clojure.lang.MapEntry. (:id v) timestamp)))]
+          (swap! completion-tracking into transducer batch)))
       (im/update! rate (count batch))
       (im/update! rate+latency-10s latency)
       {}))
@@ -181,6 +181,7 @@
 (defn on-retry [event message-id rets lifecycle]
   (let [metric (:onyx.metrics.metrics/metrics event)
         retry-rate (:retry-rate metric)] 
+    (swap! (:completion-tracking metric) dissoc message-id)
     (im/update! retry-rate 1)))
 
 (defn after-task [event lifecycle]
