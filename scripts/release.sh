@@ -7,6 +7,11 @@ set -o xtrace
 
 cd "$(dirname "$0")/.."
 
+if [[ "$#" -ne 2 ]]; then
+	echo "Usage: $0 new-version release-branch"
+	echo "Example: $0 0.8.0.4 0.8.x"
+fi
+
 new_version=$1
 release_branch=$2
 current_version=`lein pprint :version | sed s/\"//g`
