@@ -27,6 +27,7 @@
                                                         :latency-unit :nanoseconds
                                                         :quantiles [0.5 0.90 0.95 0.99 0.999]})
         batch-start (atom nil)
+        timeout-count (atom 0)
         metrics (->Metrics rate batch-start rate+latency-10s retry-rate (atom {}) completion-rate+latencies-10s)
         name (str (:metrics/workflow-name lifecycle))
         task-name (str (:onyx.core/task event))
@@ -37,12 +38,18 @@
               :peer-id peer-id}]
 
     {:onyx.metrics.metrics/metrics metrics
-     :onyx.metrics.metrics/sender-thread ((kw->fn (:metrics/sender-fn lifecycle)) lifecycle ch)
+     :onyx.metrics.metrics/timeout-rate timeout-count
+     :onyx.metrics.metrics/sender-thread ((kw->fn (:metrics/sender-fn lifecycle)) lifecycle ch timeout-count)
      :onyx.metrics.metrics/metrics-fut
      (future
        (try
          (loop [cycle-count 0 sleep-time 1000]
            (Thread/sleep sleep-time)
+
+           (when (pos? @timeout-count)
+             (info "Riemann messages timeout count:" @timeout-count)
+             (reset! timeout-count 0))
+
            (let [time-start (System/currentTimeMillis)]
              (let [throughput (im/snapshot! (:rate metrics))
                    throughputs-val (swap! throughputs (fn [tps]
