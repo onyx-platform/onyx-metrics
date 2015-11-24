@@ -1,4 +1,4 @@
-(defproject org.onyxplatform/onyx-metrics "0.8.0.9-SNAPSHOT"
+(defproject org.onyxplatform/onyx-metrics "0.8.1.0-alpha4"
   :description "Instrument Onyx workflows"
   :url "https://github.com/MichaelDrogalis/onyx"
   :license {:name "Eclipse Public License"
@@ -19,7 +19,7 @@
                  *assert* false
                  *unchecked-math* :warn-on-boxed}
   :profiles {:dev {:dependencies [^{:voom {:repo "git@github.com:onyx-platform/onyx.git" :branch "master"}}
-                                  [org.onyxplatform/onyx "0.8.0"]
+                                  [org.onyxplatform/onyx "0.8.1-alpha4"]
                                   [riemann-clojure-client "0.4.1"]]
                    :plugins [[lein-set-version "0.4.1"]
                              [lein-update-dependency "0.1.2"]
