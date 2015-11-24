@@ -11,9 +11,9 @@
       (rename-keys {:value :metric})
       (select-keys [:metric :state :service :tags]))) 
 
-(defn riemann-sender [{:keys [riemann/address riemann/port riemann/send-timeout] :as lifecycle} ch]
+(defn riemann-sender [{:keys [riemann/address riemann/port riemann/send-timeout] :as lifecycle} ch timeout-count]
   (future
-    (let [defaulted-timeout (or send-timeout 5000)
+    (let [defaulted-timeout (or send-timeout 1000)
           client (r/tcp-client {:host address :port port})]
       (loop []
         (when-let [metric-msg (<!! ch)]
@@ -27,14 +27,12 @@
                 ;; Replace with core.async offer when it is part of core.async
                 ;; If the metrics buffer is already full then there's no point adding to the problem
                 (>!! ch metric-msg)
-                (info "Riemann metrics: client send timed out. Event:" riemann-event))
+                (swap! timeout-count inc))
               (catch InterruptedException e
                 ;; Intentionally pass.
                 )
               (catch Throwable e
-                ;; Retry message
-                ;; Replace with core.async offer when it is part of core.async
-                ;; If the metrics buffer is already full then there's no point adding to the problem
+                ;; Don't retry metrics on throw, otherwise we fill up the logs very quickly
                 (>!! ch metric-msg)
                 (warn e)))))
         (recur)))))

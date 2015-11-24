@@ -4,7 +4,7 @@
             [clojure.set :refer [rename-keys]]
             [interval-metrics.core :as im]))
 
-(defn timbre-sender [lifecycle ch]
+(defn timbre-sender [lifecycle ch _]
   (future
     (loop []
       (when-let [metric-msg (<!! ch)]
