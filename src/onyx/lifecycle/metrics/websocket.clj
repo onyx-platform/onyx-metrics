@@ -3,7 +3,7 @@
             [clojure.core.async :refer [chan >!! <!! close! sliding-buffer]]
             [gniazdo.core :as ws]))
 
-(defn websocket-sender [lifecycle ch]
+(defn websocket-sender [lifecycle ch _]
   (future
     (let [conn (ws/connect (:websocket/address lifecycle))] 
       (loop []
