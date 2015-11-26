@@ -13,7 +13,7 @@
 
 (defn riemann-sender [{:keys [riemann/address riemann/port riemann/send-timeout] :as lifecycle} ch timeout-count]
   (future
-    (let [defaulted-timeout (or send-timeout 1000)
+    (let [defaulted-timeout (or send-timeout 4000)
           client (r/tcp-client {:host address :port port})]
       (loop []
         (when-let [metric-msg (<!! ch)]
