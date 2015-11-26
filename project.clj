@@ -1,4 +1,4 @@
-(defproject org.onyxplatform/onyx-metrics "0.8.1.0-alpha9"
+(defproject org.onyxplatform/onyx-metrics "0.8.1.0-alpha10"
   :description "Instrument Onyx workflows"
   :url "https://github.com/MichaelDrogalis/onyx"
   :license {:name "Eclipse Public License"
@@ -17,7 +17,7 @@
                  [interval-metrics "1.0.0"]
                  [stylefruits/gniazdo "0.4.0"]]
   :java-opts ^:replace ["-server" "-Xmx3g"]
-  :global-vars  {*warn-on-reflection* true 
+  :global-vars  {*warn-on-reflection* true
                  *assert* false
                  *unchecked-math* :warn-on-boxed}
   :profiles {:dev {:dependencies [[riemann-clojure-client "0.4.1"]]
