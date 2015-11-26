@@ -19,13 +19,13 @@
         throughputs (atom (list))
         rate (im/rate)
         retry-rate (im/rate)
-        rate+latency-10s (im/rate+latency {:rate-unit :nanoseconds 
+        rate+latency-10s (im/rate+latency {:rate-unit :nanoseconds
                                            :latency-unit :nanoseconds
-                                           :quantiles [0.5 0.90 0.95 0.99 0.999]})
+                                           :quantiles [0.5 0.90 0.95 0.99 0.999 1.0]})
 
-        completion-rate+latencies-10s (im/rate+latency {:rate-unit :nanoseconds 
+        completion-rate+latencies-10s (im/rate+latency {:rate-unit :nanoseconds
                                                         :latency-unit :nanoseconds
-                                                        :quantiles [0.5 0.90 0.95 0.99 0.999]})
+                                                        :quantiles [0.5 0.90 0.95 0.99 0.999 1.0]})
         batch-start (atom nil)
         timeout-count (atom 0)
         metrics (->Metrics rate batch-start rate+latency-10s retry-rate (atom {}) completion-rate+latencies-10s)
@@ -53,9 +53,9 @@
            (let [time-start (System/currentTimeMillis)]
              (let [throughput (im/snapshot! (:rate metrics))
                    throughputs-val (swap! throughputs (fn [tps]
-                                                        (conj (take (dec historical-throughput-max-count) 
+                                                        (conj (take (dec historical-throughput-max-count)
                                                                     tps)
-                                                              throughput)))] 
+                                                              throughput)))]
                (>!! ch (merge core {:service (format "[%s].%s.1s_throughput" task-name peer-id)
                                     :window "1s"
                                     :metric :throughput
@@ -84,11 +84,11 @@
                (when (= cycle-count 0)
                  (when (= :input (:onyx/type (:onyx.core/task-map event)))
                    (let [completion-rate+latency (:completion-rate+latencies-10s metrics)
-                         completion-latency-snapshot (im/snapshot! completion-rate+latency) 
-                         latencies-vals (->> completion-latency-snapshot 
+                         completion-latency-snapshot (im/snapshot! completion-rate+latency)
+                         latencies-vals (->> completion-latency-snapshot
                                              :latencies
-                                             (map (juxt key (fn [kv] 
-                                                              (when-let [v (val kv)] 
+                                             (map (juxt key (fn [kv]
+                                                              (when-let [v (val kv)]
                                                                 (float (/ v 1000000.0))))))
                                              (into {}))]
                      (>!! ch (merge core {:service (format "[%s].%s.50.0th_percentile_complete_latency" peer-id task-name)
@@ -117,17 +117,23 @@
                                           :quantile 0.999
                                           :metric :complete-latency
                                           :value (get latencies-vals 0.999)
-                                          :tags ["complete_latency_99.9th" "onyx" task-name name]}))))
+                                          :tags ["complete_latency_99.9th" "onyx" task-name name]}))
+                     (>!! ch (merge core {:service (format "[%s].%s.max_complete_latency" peer-id task-name)
+                                          :window "10s"
+                                          :quantile 1.0
+                                          :metric :complete-latency
+                                          :value (get latencies-vals 1.0)
+                                          :tags ["complete_latency_max" "onyx" task-name name]}))))
 
                  (let [rate+latency (:rate+latency-10s metrics)
-                       latency-snapshot (im/snapshot! rate+latency) 
-                       latencies-vals (->> latency-snapshot 
+                       latency-snapshot (im/snapshot! rate+latency)
+                       latencies-vals (->> latency-snapshot
                                            :latencies
-                                           (map (juxt key (fn [kv] 
-                                                            (when-let [v (val kv)] 
+                                           (map (juxt key (fn [kv]
+                                                            (when-let [v (val kv)]
                                                               (float (/ v 1000000.0))))))
                                            (into {}))]
-                   (>!! ch (merge core {:service (format "[%s].%s.50_percentile_batch_latency" task-name peer-id) 
+                   (>!! ch (merge core {:service (format "[%s].%s.50_percentile_batch_latency" task-name peer-id)
                                         :window "10s"
                                         :quantile 0.50
                                         :metric :batch-latency
@@ -153,7 +159,13 @@
                                         :quantile 0.999
                                         :value (get latencies-vals 0.999)
                                         :metric :batch-latency
-                                        :tags ["batch_latency_99.9th" "onyx" task-name name]}))))
+                                        :tags ["batch_latency_99.9th" "onyx" task-name name]}))
+                   (>!! ch (merge core {:service (format "[%s].%s.max_batch_latency" task-name peer-id)
+                                        :window "10s"
+                                        :quantile 1.0
+                                        :value (get latencies-vals 1.0)
+                                        :metric :batch-latency
+                                        :tags ["batch_latency_max" "onyx" task-name name]}))))
              (recur (mod (inc cycle-count) latency-period-secs)
                     (max 0 (- 1000 (- (System/currentTimeMillis) time-start))))))
          (catch InterruptedException e)
@@ -181,14 +193,14 @@
 (defn on-completion [event message-id rets lifecycle]
     (let [metric (:onyx.metrics.metrics/metrics event)
           completion-rate+latencies-10s (:completion-rate+latencies-10s metric)
-          completion-tracking (:completion-tracking metric)] 
+          completion-tracking (:completion-tracking metric)]
       (when-let [v (@completion-tracking message-id)]
         (im/update! completion-rate+latencies-10s (- ^long (System/nanoTime) ^long v))
         (swap! completion-tracking dissoc message-id))))
 
 (defn on-retry [event message-id rets lifecycle]
   (let [metric (:onyx.metrics.metrics/metrics event)
-        retry-rate (:retry-rate metric)] 
+        retry-rate (:retry-rate metric)]
     (swap! (:completion-tracking metric) dissoc message-id)
     (im/update! retry-rate 1)))
 
@@ -200,7 +212,7 @@
 (def calls
   {:lifecycle/before-task-start before-task
    :lifecycle/after-ack-segment on-completion
-   :lifecycle/after-retry-segment on-retry 
-   :lifecycle/before-batch before-batch 
+   :lifecycle/after-retry-segment on-retry
+   :lifecycle/before-batch before-batch
    :lifecycle/after-batch after-batch
    :lifecycle/after-task-stop after-task})
