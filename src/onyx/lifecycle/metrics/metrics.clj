@@ -47,7 +47,7 @@
            (Thread/sleep sleep-time)
 
            (when (pos? @timeout-count)
-             (info "Riemann messages timeout count:" @timeout-count)
+             (info "Message send timeout count:" @timeout-count)
              (reset! timeout-count 0))
 
            (let [time-start (System/currentTimeMillis)]

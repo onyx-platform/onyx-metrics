@@ -11,28 +11,45 @@
       (rename-keys {:value :metric})
       (select-keys [:metric :state :service :tags]))) 
 
+
+(def max-backoff-time 1000)
+
+(defn next-sleep-time [current]
+  (if (zero? current)
+    10
+    (min max-backoff-time (* 2 current))))
+
 (defn riemann-sender [{:keys [riemann/address riemann/port riemann/send-timeout] :as lifecycle} ch timeout-count]
+  (when (nil? address)
+    (throw (ex-info "Invalid Riemann metrics configuration." lifecycle)))
+
   (future
     (let [defaulted-timeout (or send-timeout 4000)
-          client (r/tcp-client {:host address :port port})]
-      (loop []
+          defaulted-port (or port 5555)
+          _ (info "Connecting to riemann server @" address port)
+          client (r/tcp-client {:host address :port defaulted-port})]
+      (loop [sleep 0]
+        ;; Exponential backoff to rate limit errors
+        (Thread/sleep sleep)
         (when-let [metric-msg (<!! ch)]
-          (let [riemann-event (metric->riemann-event metric-msg)]
-            (try
-              (when (= ::timeout 
-                       (-> client 
-                           (r/send-event riemann-event)
-                           (deref defaulted-timeout ::timeout)))
-                ;; Retry message
-                ;; Replace with core.async offer when it is part of core.async
-                ;; If the metrics buffer is already full then there's no point adding to the problem
-                (>!! ch metric-msg)
-                (swap! timeout-count inc))
-              (catch InterruptedException e
-                ;; Intentionally pass.
-                )
-              (catch Throwable e
-                ;; Don't retry metrics on throw, otherwise we fill up the logs very quickly
-                (>!! ch metric-msg)
-                (warn e)))))
-        (recur)))))
+          (recur 
+            (let [riemann-event (metric->riemann-event metric-msg)]
+              (try
+                (when (= ::timeout 
+                         (-> client 
+                             (r/send-event riemann-event)
+                             (deref defaulted-timeout ::timeout)))
+                  ;; Retry message
+                  ;; Replace with core.async offer when it is part of core.async
+                  ;; If the metrics buffer is already full then there's no point adding to the problem
+                  (>!! ch metric-msg)
+                  (swap! timeout-count inc))
+                0
+                (catch InterruptedException e
+                  ;; Intentionally pass.
+                  )
+                (catch Throwable e
+                  ;; Don't retry metrics on throw, otherwise we fill up the logs very quickly
+                  (>!! ch metric-msg)
+                  (warn e "Lost riemann connection" address port)
+                  (next-sleep-time sleep))))))))))
