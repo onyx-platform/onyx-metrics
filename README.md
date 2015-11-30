@@ -14,14 +14,15 @@ In your project file:
 
 Computes the following metrics.
 * 1s, 10s, 60s throughput
-* 50th, 90th, 99th, 99.9th percentile batch latency (time to process a batch, computed every 10s)
-* 1s input segment retries (input segments that have not been processed within :onyx/pending-timeout)
-* 50th, 90th, 99th, 99.9th percentile input segment completed latency (time to full process an input segment through the DAG, computed every 10s)
+* 50th, 90th, 99th, 99.9th, maxiumum percentile batch latency (time to process a batch, computed every 10s)
+* Input tasks
+  * 1s input segment retries (input segments that have not been processed within :onyx/pending-timeout)
+  * 50th, 90th, 99th, 99.9th, maximum percentile input segment completed latency (time to full process an input segment through the DAG, computed every 10s)
+  * count of pending-messages (messages outstanding) 
 
 #### Lifecycle entries
 
 Add these maps to your `:lifecycles` vector in the argument to `:onyx.api/submit-job`.
-
 
 ##### Riemann metrics
 
@@ -41,7 +42,6 @@ In your peer boot-up namespace:
 ```
 
 ```clojure
-
 {:lifecycle/task :all ; or :task-name for an individual task
  :lifecycle/calls :onyx.lifecycle.metrics.metrics/calls
  :metrics/buffer-capacity 10000
@@ -50,7 +50,6 @@ In your peer boot-up namespace:
  :riemann/address "192.168.1.23"
  :riemann/port 5555
  :lifecycle/doc "Instruments a task's metrics and sends via riemann"}
-
 ```
 
 ##### Timbre Logging

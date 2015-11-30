@@ -17,8 +17,48 @@
 (defn my-inc [{:keys [n] :as segment}]
   (assoc segment :n (inc n)))
 
+(def valid-tag-combos
+  #{["throughput_1s" "onyx" ":out" "test-workflow"]
+    ["throughput_1s" "onyx" ":inc" "test-workflow"]
+    ["throughput_1s" "onyx" ":in" "test-workflow"]
+    ["throughput_10s" "onyx" ":inc" "test-workflow"]
+    ["throughput_10s" "onyx" ":in" "test-workflow"]
+    ["throughput_10s" "onyx" ":out" "test-workflow"]
+    ["throughput_60s" "onyx" ":inc" "test-workflow"]
+    ["throughput_60s" "onyx" ":in" "test-workflow"]
+    ["throughput_60s" "onyx" ":out" "test-workflow"]
+
+    ["batch_latency_max" "onyx" ":out" "test-workflow"]
+    ["batch_latency_max" "onyx" ":inc" "test-workflow"]
+    ["batch_latency_max" "onyx" ":in" "test-workflow"]
+    ["batch_latency_99.9th" "onyx" ":in" "test-workflow"]
+    ["batch_latency_99.9th" "onyx" ":inc" "test-workflow"]
+    ["batch_latency_99.9th" "onyx" ":out" "test-workflow"]
+    ["batch_latency_99th" "onyx" ":in" "test-workflow"]
+    ["batch_latency_99th" "onyx" ":inc" "test-workflow"]
+    ["batch_latency_99th" "onyx" ":out" "test-workflow"]
+    ["batch_latency_90th" "onyx" ":inc" "test-workflow"]
+    ["batch_latency_90th" "onyx" ":in" "test-workflow"]
+    ["batch_latency_90th" "onyx" ":out" "test-workflow"]
+    ["batch_latency_50th" "onyx" "50_percentile" ":out" "test-workflow"]
+    ["batch_latency_50th" "onyx" "50_percentile" ":inc" "test-workflow"]
+    ["batch_latency_50th" "onyx" "50_percentile" ":in" "test-workflow"]
+
+    ["pending_messages_count" "onyx" ":in" "test-workflow"]
+
+    ["complete_latency_max" "onyx" ":in" "test-workflow"]
+    ["complete_latency_99.9th" "onyx" ":in" "test-workflow"]
+    ["complete_latency_99th" "onyx" ":in" "test-workflow"]
+    ["complete_latency_90th" "onyx" ":in" "test-workflow"]
+    ["complete_latency_50th" "onyx" "50_percentile" ":in" "test-workflow"]
+
+    ["retry_segment_rate_1s" "onyx" ":in" "test-workflow"]
+    ["retry_segment_rate_1s" "onyx" ":out" "test-workflow"]
+    ["retry_segment_rate_1s" "onyx" ":inc" "test-workflow"]})
+
 (deftest metrics-test
-  (doseq [sender [:onyx.lifecycle.metrics.websocket/websocket-sender
+  (doseq [sender [;:onyx.lifecycle.metrics.websocket/websocket-sender
+
                   ;; cannot test timbre-sender as info is a macro?
                   ;:onyx.lifecycle.metrics.timbre/timbre-sender
                   :onyx.lifecycle.metrics.riemann/riemann-sender]] 
@@ -38,7 +78,6 @@
 
     (def out-calls
       {:lifecycle/before-task-start inject-out-ch})
-
 
     (let [events (atom [])] 
       (with-redefs [riemann.client/tcp-client (fn [opts] nil)
@@ -69,6 +108,7 @@
                             :onyx/type :input
                             :onyx/medium :core.async
                             :onyx/batch-size batch-size
+                            :onyx/max-pending 1000
                             :onyx/max-peers 1
                             :onyx/doc "Reads segments from a core.async channel"}
 
@@ -110,16 +150,18 @@
                   _ (>!! in-chan :done)
                   _ (close! in-chan)
                   start-time (System/currentTimeMillis)
-                  _ (onyx.api/submit-job peer-config
+                  job (onyx.api/submit-job peer-config
                                          {:catalog catalog
                                           :workflow workflow
                                           :lifecycles lifecycles
                                           :task-scheduler :onyx.task-scheduler/balanced})
                   results (take-segments! out-chan)
+                  _ (onyx.api/await-job-completion peer-config (:job-id job))
                   end-time (System/currentTimeMillis)]
               (let [expected (set (map (fn [x] {:n (inc x)}) (range n-messages)))]
                 (is (= expected (set (butlast results))))
                 (is (= :done (last results)))
+                (is (= valid-tag-combos (set (map :tags @events))))
                 (is (> (count @events) (* 3 ; number of tasks
                                           (/ (- end-time start-time) 1000)
                                           ;; only approximate because of brittle test on CI

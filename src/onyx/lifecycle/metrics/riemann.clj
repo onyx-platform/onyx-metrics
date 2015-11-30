@@ -11,7 +11,6 @@
       (rename-keys {:value :metric})
       (select-keys [:metric :state :service :tags]))) 
 
-
 (def max-backoff-time 1000)
 
 (defn next-sleep-time [current]
