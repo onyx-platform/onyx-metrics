@@ -1,3 +1,6 @@
+# 0.8.2.4
+- Fix test error causing non-release of 0.8.2.4
+
 # 0.8.2.3
 - Added measure for counting pending messages "pending_messages_count"
 - *BREAKING CHANGE* percentile measurements with a period now use an underscore e.g. 99.9 -> 99_9. This is so they are not segmented in grafana and others.
