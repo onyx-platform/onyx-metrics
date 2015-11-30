@@ -161,7 +161,7 @@
               (let [expected (set (map (fn [x] {:n (inc x)}) (range n-messages)))]
                 (is (= expected (set (butlast results))))
                 (is (= :done (last results)))
-                (is (= valid-tag-combos (set (map :tags @events))))
+                (is (= valid-tag-combos (set (map (comp vec butlast :tags) @events))))
                 (is (> (count @events) (* 3 ; number of tasks
                                           (/ (- end-time start-time) 1000)
                                           ;; only approximate because of brittle test on CI
