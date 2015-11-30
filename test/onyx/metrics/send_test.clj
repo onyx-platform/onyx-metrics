@@ -162,6 +162,7 @@
                 (is (= expected (set (butlast results))))
                 (is (= :done (last results)))
                 (is (= valid-tag-combos (set (map (comp vec butlast :tags) @events))))
+                (is (nil? (some #(not (instance? java.lang.String %)) (mapcat :tags @events))))
                 (is (> (count @events) (* 3 ; number of tasks
                                           (/ (- end-time start-time) 1000)
                                           ;; only approximate because of brittle test on CI
