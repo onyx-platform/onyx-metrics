@@ -34,6 +34,7 @@
         name (str (:metrics/workflow-name lifecycle))
         task-name (str (:onyx.core/task event))
         peer-id (:onyx.core/id event)
+        peer-id-str (str peer-id)
         core {:job-id (:onyx.core/job-id event)
               :task-id (:onyx.core/task-id event)
               :task-name (:onyx.core/task event)
@@ -63,32 +64,32 @@
                                     :window "1s"
                                     :metric :throughput
                                     :value (apply + (remove nil? (take 1 throughputs-val)))
-                                    :tags ["throughput_1s" "onyx" task-name name peer-id]}))
+                                    :tags ["throughput_1s" "onyx" task-name name peer-id-str]}))
 
                (>!! ch (merge core {:service (format "[%s] 10s_throughput" task-name)
                                     :window "10s"
                                     :metric :throughput
                                     :value (apply + (remove nil? (take 10 throughputs-val)))
-                                    :tags ["throughput_10s" "onyx" task-name name peer-id]}))
+                                    :tags ["throughput_10s" "onyx" task-name name peer-id-str]}))
 
                (>!! ch (merge core {:service (format "[%s] 60s_throughput" task-name)
                                     :window "60s"
                                     :metric :throughput
                                     :value (apply + (remove nil? (take 60 throughputs-val)))
-                                    :tags ["throughput_60s" "onyx" task-name name peer-id]})))
+                                    :tags ["throughput_60s" "onyx" task-name name peer-id-str]})))
 
                (let [retry-rate-val (im/snapshot! (:retry-rate metrics))]
                  (>!! ch (merge core {:service (format "[%s] 1s_retry-segment-rate" task-name)
                                       :window "1s"
                                       :metric :retry-rate
                                       :value retry-rate-val 
-                                      :tags ["retry_segment_rate_1s" "onyx" task-name name peer-id]})))
+                                      :tags ["retry_segment_rate_1s" "onyx" task-name name peer-id-str]})))
 
                  (when (= :input (:onyx/type (:onyx.core/task-map event)))
                    (>!! ch (merge core {:service (format "[%s] pending_messages_count" task-name)
                                         :metric :pending-messages-count
                                         :value @pending-size
-                                        :tags ["pending_messages_count" "onyx" task-name name peer-id]}))
+                                        :tags ["pending_messages_count" "onyx" task-name name peer-id-str]}))
 
                    (when (= cycle-count 0) ; only snapshot every 10s
                      (let [completion-rate+latency (:completion-rate+latencies-10s metrics)
@@ -105,34 +106,34 @@
                                             :metric :complete-latency
                                             :quantile 0.50
                                             :value (get latencies-vals 0.5)
-                                            :tags ["complete_latency_50th" "onyx" "50_percentile" task-name name peer-id]}))
+                                            :tags ["complete_latency_50th" "onyx" "50_percentile" task-name name peer-id-str]}))
 
                        (>!! ch (merge core {:service (format "[%s] 90_0th_percentile_complete_latency" task-name)
                                             :window "10s"
                                             :quantile 0.90
                                             :metric :complete-latency
                                             :value (get latencies-vals 0.90)
-                                            :tags ["complete_latency_90th" "onyx" task-name name peer-id]}))
+                                            :tags ["complete_latency_90th" "onyx" task-name name peer-id-str]}))
 
                        (>!! ch (merge core {:service (format "[%s] 99_0th_percentile_complete_latency" task-name)
                                             :window "10s"
                                             :quantile 0.99
                                             :metric :complete-latency
                                             :value (get latencies-vals 0.99)
-                                            :tags ["complete_latency_99th" "onyx" task-name name peer-id]}))
+                                            :tags ["complete_latency_99th" "onyx" task-name name peer-id-str]}))
 
                        (>!! ch (merge core {:service (format "[%s] 99_9th_percentile_complete_latency" task-name)
                                             :window "10s"
                                             :quantile 0.999
                                             :metric :complete-latency
                                             :value (get latencies-vals 0.999)
-                                            :tags ["complete_latency_99_9th" "onyx" task-name name peer-id]}))
+                                            :tags ["complete_latency_99_9th" "onyx" task-name name peer-id-str]}))
                        (>!! ch (merge core {:service (format "[%s] max_complete_latency" task-name)
                                             :window "10s"
                                             :quantile 1.0
                                             :metric :complete-latency
                                             :value (get latencies-vals 1.0)
-                                            :tags ["complete_latency_max" "onyx" task-name name peer-id]})))))
+                                            :tags ["complete_latency_max" "onyx" task-name name peer-id-str]})))))
 
                  (let [rate+latency (:rate+latency-10s metrics)
                        latency-snapshot (im/snapshot! rate+latency)
@@ -147,34 +148,34 @@
                                         :quantile 0.50
                                         :metric :batch-latency
                                         :value (get latencies-vals 0.5)
-                                        :tags ["batch_latency_50th" "onyx" "50_percentile" task-name name peer-id]}))
+                                        :tags ["batch_latency_50th" "onyx" "50_percentile" task-name name peer-id-str]}))
 
                    (>!! ch (merge core {:service (format "[%s] 90th_percentile_batch_latency" task-name)
                                         :window "10s"
                                         :quantile 0.90
                                         :value (get latencies-vals 0.90)
                                         :metric :batch-latency
-                                        :tags ["batch_latency_90th" "onyx" task-name name peer-id]}))
+                                        :tags ["batch_latency_90th" "onyx" task-name name peer-id-str]}))
 
                    (>!! ch (merge core {:service (format "[%s] 99th_percentile_batch_latency" task-name)
                                         :window "10s"
                                         :quantile 0.99
                                         :value (get latencies-vals 0.99)
                                         :metric :batch-latency
-                                        :tags ["batch_latency_99th" "onyx" task-name name peer-id]}))
+                                        :tags ["batch_latency_99th" "onyx" task-name name peer-id-str]}))
 
                    (>!! ch (merge core {:service (format "[%s] 99_9th_percentile_batch_latency" task-name)
                                         :window "10s"
                                         :quantile 0.999
                                         :value (get latencies-vals 0.999)
                                         :metric :batch-latency
-                                        :tags ["batch_latency_99_9th" "onyx" task-name name peer-id]}))
+                                        :tags ["batch_latency_99_9th" "onyx" task-name name peer-id-str]}))
                    (>!! ch (merge core {:service (format "[%s] max_batch_latency" task-name)
                                         :window "10s"
                                         :quantile 1.0
                                         :value (get latencies-vals 1.0)
                                         :metric :batch-latency
-                                        :tags ["batch_latency_max" "onyx" task-name name peer-id]})))
+                                        :tags ["batch_latency_max" "onyx" task-name name peer-id-str]})))
              (recur (mod (inc cycle-count) latency-period-secs)
                     (max 0 (- 1000 (- (System/currentTimeMillis) time-start))))))
          (catch InterruptedException e)
