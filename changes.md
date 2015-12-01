@@ -1,3 +1,6 @@
+# 0.8.2.6
+- Fix bug where throughput would only be recorded for input tasks.
+
 # 0.8.2.5
 - Undo breaking change in 0.8.0.4. Include peer-id in tags, but not in service name.
 
