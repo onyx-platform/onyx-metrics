@@ -8,6 +8,8 @@
             [taoensso.timbre :refer [info warn fatal]]
             [onyx.lifecycle.metrics.metrics]
             [onyx.lifecycle.metrics.timbre]
+            [onyx.monitoring.events :as monitoring]
+            [onyx.monitoring.riemann :as monitoring-riemann]
             [onyx.lifecycle.metrics.riemann]
             [onyx.lifecycle.metrics.websocket]
             [onyx.api]))
@@ -51,6 +53,10 @@
     ["complete_latency_99th" "onyx" ":in" "test-workflow"]
     ["complete_latency_90th" "onyx" ":in" "test-workflow"]
     ["complete_latency_50th" "onyx" "50_percentile" ":in" "test-workflow"]
+
+    ["monitoring-config"]
+    ["onyx" "peer.complete-message.latency max"]
+    ["onyx" "peer.ack-segments.latency max"]
 
     ["retry_segment_rate_1s" "onyx" ":in" "test-workflow"]
     ["retry_segment_rate_1s" "onyx" ":out" "test-workflow"]
@@ -100,8 +106,11 @@
                            :onyx.messaging/impl :aeron
                            :onyx.messaging/allow-short-circuit? true
                            :onyx.messaging/peer-port 40200
-                           :onyx.messaging/bind-addr "localhost"}]
-          (with-test-env [test-env [3 env-config peer-config]]
+                           :onyx.messaging/bind-addr "localhost"}
+              host-id (str (java.util.UUID/randomUUID))
+              monitoring-config (monitoring/monitoring-config host-id 10000)
+              monitoring-thread (monitoring-riemann/start-riemann-sender "localhost" 12201 monitoring-config)]
+          (with-test-env [test-env [3 env-config peer-config monitoring-config]]
             (let [batch-size 20
                   catalog [{:onyx/name :in
                             :onyx/plugin :onyx.plugin.core-async/input
