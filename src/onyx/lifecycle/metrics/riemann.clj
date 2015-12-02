@@ -11,25 +11,30 @@
       (rename-keys {:value :metric})
       (select-keys [:metric :state :service :tags]))) 
 
-(def max-backoff-time 1000)
+(def max-backoff-time 2000)
 
 (defn next-sleep-time [current]
   (if (zero? current)
     10
     (min max-backoff-time (* 2 current))))
 
-(defn riemann-sender [{:keys [riemann/address riemann/port riemann/send-timeout] :as lifecycle} ch timeout-count]
+(defn riemann-sender [{:keys [riemann/address riemann/port riemann/send-timeout] :as riemann-config} ch]
   (when (nil? address)
-    (throw (ex-info "Invalid Riemann metrics configuration." lifecycle)))
+    (throw (ex-info "Invalid Riemann metrics configuration." riemann-config)))
 
   (future
     (let [defaulted-timeout (or send-timeout 4000)
           defaulted-port (or port 5555)
           _ (info "Connecting to riemann server @" address port)
-          client (r/tcp-client {:host address :port defaulted-port})]
+          client (r/tcp-client {:host address :port defaulted-port})
+          timeout-count (atom 0)]
       (loop [sleep 0]
         ;; Exponential backoff to rate limit errors
-        (Thread/sleep sleep)
+        (when-not (zero? sleep) 
+          (info (format "Message send timeout count %s. Backing off %s.") @timeout-count sleep)
+          (Thread/sleep sleep))
+
+        ;; TODO, batch sends
         (when-let [metric-msg (<!! ch)]
           (recur 
             (let [riemann-event (metric->riemann-event metric-msg)]

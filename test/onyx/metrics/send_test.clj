@@ -9,8 +9,7 @@
             [onyx.lifecycle.metrics.metrics]
             [onyx.lifecycle.metrics.timbre]
             [onyx.monitoring.events :as monitoring]
-            [onyx.monitoring.riemann :as monitoring-riemann]
-            [onyx.lifecycle.metrics.riemann]
+            [onyx.lifecycle.metrics.riemann :as riemann]
             [onyx.lifecycle.metrics.websocket]
             [onyx.api]))
 
@@ -109,7 +108,8 @@
                            :onyx.messaging/bind-addr "localhost"}
               host-id (str (java.util.UUID/randomUUID))
               monitoring-config (monitoring/monitoring-config host-id 10000)
-              monitoring-thread (monitoring-riemann/start-riemann-sender "localhost" 12201 monitoring-config)]
+              monitoring-thread (riemann/riemann-sender {:riemann/address "localhost" :riemann/port 12201} 
+                                                        (:monitoring/ch monitoring-config))]
           (with-test-env [test-env [3 env-config peer-config monitoring-config]]
             (let [batch-size 20
                   catalog [{:onyx/name :in
