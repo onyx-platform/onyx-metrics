@@ -1,3 +1,18 @@
+# 0.8.2.6
+- Fix bug where throughput would only be recorded for input tasks.
+
+# 0.8.2.5
+- Undo breaking change in 0.8.0.4. Include peer-id in tags, but not in service name.
+
+# 0.8.2.4
+- Fix test error causing non-release of 0.8.2.4
+
+# 0.8.2.3
+- Added measure for counting pending messages "pending_messages_count"
+- *BREAKING CHANGE* percentile measurements with a period now use an underscore e.g. 99.9 -> 99_9. This is so they are not segmented in grafana and others.
+- *BREAKING CHANGE* batch latency percentiles now include "th" in their name for consistency with the other services names.
+
+
 # 0.8.0.4
 - *BREAKING CHANGE* Further segment metrics by peer-id, otherwise riemann and others will think measurements from different peers on the same task are just another reading
 
