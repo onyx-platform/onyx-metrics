@@ -1,5 +1,5 @@
 (ns onyx.monitoring.events
-  (:require [clojure.core.async :refer [chan >!! <!! dropping-buffer alts!! timeout go-loop thread]]
+  (:require [clojure.core.async :refer [chan >!! <!! sliding-buffer alts!! timeout go-loop thread]]
             [taoensso.timbre :refer [warn info]]
             [interval-metrics.core :as im]
             [riemann.client :as r]))
@@ -248,8 +248,16 @@
        :value value
        :tags ["onyx" service host-id]})))
 
+(defn messenger-queue-count [monitoring-config queue-count event]
+  (let [{:keys [id task]} (:task-information monitoring-config)] 
+    (swap! queue-count (fn [m] (assoc m (list id (:name task)) (:count event))))))
+
+(defn messenger-queue-count-unregister [monitoring-config queue-count event]
+  (let [{:keys [id task]} (:task-information monitoring-config)] 
+    (swap! queue-count dissoc (list id (:name task)))))
+
 (defn monitoring-config [host-id buf-capacity]
-  (let [ch (chan (dropping-buffer buf-capacity))
+  (let [ch (chan (sliding-buffer buf-capacity))
         host-id (str host-id)
         complete-message-latency (im/rate+latency {:rate-unit :milliseconds
                                                    :latencies :milliseconds
@@ -273,9 +281,16 @@
         window-log-compaction-latency (im/rate+latency {:rate-unit :milliseconds
                                                         :latencies :milliseconds
                                                         :quantiles [0.5 0.9 0.95 0.99 0.999 1.0]})
+        messenger-queue-counts (atom {})
         periodic-ch (go-loop []
                              (let [timeout-ch (timeout 1000)
                                    v (<!! timeout-ch)]
+                               (run! (fn [[[peer-id task-name] cnt]]
+                                       (>!! ch {:service "task.messenger-buffer count" 
+                                                :value cnt 
+                                                :tags ["monitoring-config" (str task-name) (str peer-id)]
+                                                :state "ok"}))
+                                     @messenger-queue-counts)
                                (some->> ack-segments-latency
                                         (snapshot-latencies+event host-id "peer.ack-segments.latency max")
                                         (>!! ch))
@@ -327,6 +342,10 @@
      :peer-notify-join (partial peer-notify-join host-id ch)
      :peer-accept-join (partial peer-accept-join host-id ch)
      ;; Perf sensitive operations
+     :messenger-queue-count (fn [config op] 
+                              (messenger-queue-count config messenger-queue-counts op))
+     :messenger-queue-count-unregister (fn [config op] 
+                                         (messenger-queue-count-unregister config messenger-queue-counts op))
      :peer-ack-segments (fn [config op] (peer-ack-segments ack-segments-latency config op))
      :peer-retry-segment (fn [config op] (peer-retry-segment retry-message-latency config op))
      :peer-complete-segment (fn [config op] (peer-complete-message complete-message-latency config op))

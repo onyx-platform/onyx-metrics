@@ -57,6 +57,10 @@
     ["onyx" "peer.complete-message.latency max"]
     ["onyx" "peer.ack-segments.latency max"]
 
+    ["monitoring-config" ":in"] 
+    ["monitoring-config" ":out"]
+    ["monitoring-config" ":inc"]
+
     ["retry_segment_rate_1s" "onyx" ":in" "test-workflow"]
     ["retry_segment_rate_1s" "onyx" ":out" "test-workflow"]
     ["retry_segment_rate_1s" "onyx" ":inc" "test-workflow"]})
@@ -103,7 +107,7 @@
                            :onyx/id id
                            :onyx.peer/job-scheduler :onyx.job-scheduler/greedy
                            :onyx.messaging/impl :aeron
-                           :onyx.messaging/allow-short-circuit? true
+                           :onyx.messaging/allow-short-circuit? false
                            :onyx.messaging/peer-port 40200
                            :onyx.messaging/bind-addr "localhost"}
               host-id (str (java.util.UUID/randomUUID))
