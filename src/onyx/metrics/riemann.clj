@@ -24,8 +24,9 @@
 
   (future
     (let [defaulted-timeout (or send-timeout 4000)
-          defaulted-port (or port 5555)
-          _ (info "Connecting to riemann server @" address port)
+          defaulted-port (if port
+                           (Integer/parseInt (str port))
+                           5555)
           client (r/tcp-client {:host address :port defaulted-port})
           timeout-count (atom 0)]
       (loop [sleep 0]

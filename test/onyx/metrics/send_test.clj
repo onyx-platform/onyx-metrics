@@ -53,7 +53,8 @@
     ["complete_latency_90th" "onyx" ":in" "test-workflow"]
     ["complete_latency_50th" "onyx" "50_percentile" ":in" "test-workflow"]
 
-    ["monitoring-config"]
+    []
+
     ["onyx" "peer.complete-message.latency max"]
     ["onyx" "peer.ack-segments.latency max"]
 
@@ -109,7 +110,7 @@
                            :onyx.messaging/peer-port 40200
                            :onyx.messaging/bind-addr "localhost"}
               host-id (str (java.util.UUID/randomUUID))
-              monitoring-config (monitoring/monitoring-config host-id 10000)
+              monitoring-config (monitoring/monitoring-config 10000)
               monitoring-thread (riemann/riemann-sender {:riemann/address "localhost" :riemann/port 12201} 
                                                         (:monitoring/ch monitoring-config))]
           (with-test-env [test-env [3 env-config peer-config monitoring-config]]
