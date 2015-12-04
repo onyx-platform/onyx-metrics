@@ -61,9 +61,7 @@
     ["monitoring-config" ":out"]
     ["monitoring-config" ":inc"]
 
-    ["retry_segment_rate_1s" "onyx" ":in" "test-workflow"]
-    ["retry_segment_rate_1s" "onyx" ":out" "test-workflow"]
-    ["retry_segment_rate_1s" "onyx" ":inc" "test-workflow"]})
+    ["retry_segment_rate_1s" "onyx" ":in" "test-workflow"]})
 
 (deftest metrics-test
   (doseq [sender [;:onyx.lifecycle.metrics.websocket/websocket-sender
