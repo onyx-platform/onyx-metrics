@@ -71,14 +71,16 @@
                                     :value (apply + (remove nil? (take 60 throughputs-val)))
                                     :tags ["throughput_60s" "onyx" task-name name peer-id-str]})))
 
-               (let [retry-rate-val (im/snapshot! (:retry-rate metrics))]
-                 (>!! ch (merge core {:service (format "[%s] 1s_retry-segment-rate" task-name)
-                                      :window "1s"
-                                      :metric :retry-rate
-                                      :value retry-rate-val 
-                                      :tags ["retry_segment_rate_1s" "onyx" task-name name peer-id-str]})))
+               
 
                  (when (= :input (:onyx/type (:onyx.core/task-map event)))
+                   (let [retry-rate-val (im/snapshot! (:retry-rate metrics))]
+                     (>!! ch (merge core {:service (format "[%s] 1s_retry-segment-rate" task-name)
+                                          :window "1s"
+                                          :metric :retry-rate
+                                          :value retry-rate-val 
+                                          :tags ["retry_segment_rate_1s" "onyx" task-name name peer-id-str]})))
+
                    (>!! ch (merge core {:service (format "[%s] pending_messages_count" task-name)
                                         :metric :pending-messages-count
                                         :value @pending-size
