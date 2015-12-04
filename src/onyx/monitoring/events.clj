@@ -286,7 +286,7 @@
                              (let [timeout-ch (timeout 1000)
                                    v (<!! timeout-ch)]
                                (run! (fn [[[peer-id task-name] cnt]]
-                                       (>!! ch {:service "task.messenger-buffer count" 
+                                       (>!! ch {:service (str (format "%s task-messenger-buffer-count" task-name)) 
                                                 :value cnt 
                                                 :tags ["monitoring-config" (str task-name) (str peer-id)]
                                                 :state "ok"}))
