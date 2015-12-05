@@ -53,13 +53,16 @@
     ["complete_latency_90th" "onyx" ":in" "test-workflow"]
     ["complete_latency_50th" "onyx" "50_percentile" ":in" "test-workflow"]
 
-    ["monitoring-config"]
+    []
+
     ["onyx" "peer.complete-message.latency max"]
     ["onyx" "peer.ack-segments.latency max"]
 
-    ["retry_segment_rate_1s" "onyx" ":in" "test-workflow"]
-    ["retry_segment_rate_1s" "onyx" ":out" "test-workflow"]
-    ["retry_segment_rate_1s" "onyx" ":inc" "test-workflow"]})
+    ["monitoring-config" ":in"] 
+    ["monitoring-config" ":out"]
+    ["monitoring-config" ":inc"]
+
+    ["retry_segment_rate_1s" "onyx" ":in" "test-workflow"]})
 
 (deftest metrics-test
   (doseq [sender [;:onyx.lifecycle.metrics.websocket/websocket-sender
@@ -84,16 +87,16 @@
     (def out-calls
       {:lifecycle/before-task-start inject-out-ch})
 
-    (let [events (atom [])] 
+    (let [events-atom (atom [])] 
       (with-redefs [riemann.client/tcp-client (fn [opts] nil)
-                    riemann.client/send-event (fn [_ event] 
-                                                (swap! events conj event)
+                    riemann.client/send-events (fn [_ events] 
+                                                (swap! events-atom into events)
                                                 (future :sent))
                     ;taoensso.timbre/info (fn [& vs]
                     ;                       (swap! events conj :print))
                     gniazdo.core/connect (fn [_])
                     gniazdo.core/send-msg (fn [_ v]
-                                            (swap! events conj v))] 
+                                            (swap! events-atom conj v))] 
         (let [id (java.util.UUID/randomUUID)
               env-config {:zookeeper/address "127.0.0.1:2188"
                           :zookeeper/server? true
@@ -103,11 +106,11 @@
                            :onyx/id id
                            :onyx.peer/job-scheduler :onyx.job-scheduler/greedy
                            :onyx.messaging/impl :aeron
-                           :onyx.messaging/allow-short-circuit? true
+                           :onyx.messaging/allow-short-circuit? false
                            :onyx.messaging/peer-port 40200
                            :onyx.messaging/bind-addr "localhost"}
               host-id (str (java.util.UUID/randomUUID))
-              monitoring-config (monitoring/monitoring-config host-id 10000)
+              monitoring-config (monitoring/monitoring-config 10000)
               monitoring-thread (riemann/riemann-sender {:riemann/address "localhost" :riemann/port 12201} 
                                                         (:monitoring/ch monitoring-config))]
           (with-test-env [test-env [3 env-config peer-config monitoring-config]]
@@ -170,9 +173,9 @@
               (let [expected (set (map (fn [x] {:n (inc x)}) (range n-messages)))]
                 (is (= expected (set (butlast results))))
                 (is (= :done (last results)))
-                (is (= valid-tag-combos (set (map (comp vec butlast :tags) @events))))
-                (is (nil? (some #(not (instance? java.lang.String %)) (mapcat :tags @events))))
-                (is (> (count @events) (* 3 ; number of tasks
-                                          (/ (- end-time start-time) 1000)
-                                          ;; only approximate because of brittle test on CI
-                                          3)))))))))))
+                (is (= valid-tag-combos (set (map (comp vec butlast :tags) @events-atom))))
+                (is (nil? (some #(not (instance? java.lang.String %)) (mapcat :tags @events-atom))))
+                (is (> (count @events-atom) (* 3 ; number of tasks
+                                               (/ (- end-time start-time) 1000)
+                                               ;; only approximate because of brittle test on CI
+                                               3)))))))))))
