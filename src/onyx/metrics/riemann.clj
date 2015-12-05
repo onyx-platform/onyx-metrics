@@ -42,7 +42,7 @@
           timeout-count (atom 0)]
         
       (while (not (Thread/interrupted)) 
-        (let [events (read-batch ch batch-size batch-timeout)]
+        (let [events (map metric->riemann-event (read-batch ch batch-size batch-timeout))]
           (when-not (empty? events) 
             (loop [sleep 0]
               ;; Exponential backoff to rate limit errors
@@ -61,4 +61,5 @@
                                (warn e "Lost riemann connection" address port)
                                ::exception))]
                 (when (#{::exception ::timeout} result)
+                  (swap! timeout-count inc)
                   (recur (next-sleep-time sleep)))))))))))
