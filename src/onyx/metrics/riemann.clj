@@ -42,7 +42,7 @@
           timeout-count (atom 0)]
         
       (while (not (Thread/interrupted)) 
-        (let [events (first (map metric->riemann-event (read-batch ch batch-size batch-timeout)))]
+        (let [events (map metric->riemann-event (read-batch ch batch-size batch-timeout))]
           (when-not (empty? events) 
             (loop [sleep 0]
               ;; Exponential backoff to rate limit errors
@@ -52,7 +52,7 @@
 
               (let [result (try
                              (-> client 
-                                 (r/send-event events)
+                                 (r/send-events events)
                                  (deref defaulted-timeout ::timeout))
                              (catch InterruptedException e
                                ;; Intentionally pass.
