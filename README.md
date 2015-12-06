@@ -32,7 +32,7 @@ Send all metrics to a Riemann instance on a single thread. Events are buffered i
 First, add the clojure riemann client dependency to your project. e.g.
 ```clojure
 [riemann-clojure-client "0.4.1"]
-
+```
 
 In your peer boot-up namespace:
 
