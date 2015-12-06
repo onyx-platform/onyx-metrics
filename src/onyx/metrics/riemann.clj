@@ -32,7 +32,7 @@
     (throw (ex-info "Invalid Riemann metrics configuration." riemann-config)))
 
   (future
-    (let [batch-size (or batch-size 50)
+    (let [batch-size (or batch-size 10)
           batch-timeout (or batch-timeout 50)
           defaulted-timeout (or send-timeout 4000)
           defaulted-port (if port
@@ -42,17 +42,17 @@
           timeout-count (atom 0)]
         
       (while (not (Thread/interrupted)) 
-        (let [events (map metric->riemann-event (read-batch ch batch-size batch-timeout))]
+        (let [events (first (map metric->riemann-event (read-batch ch batch-size batch-timeout)))]
           (when-not (empty? events) 
             (loop [sleep 0]
               ;; Exponential backoff to rate limit errors
               (when-not (zero? sleep) 
-                (info (format "Message send timeout count %s. Backing off %s.") @timeout-count sleep)
+                (info (format "Message send timeout count %s. Backing off %s." @timeout-count sleep))
                 (Thread/sleep sleep))
 
               (let [result (try
                              (-> client 
-                                 (r/send-events events)
+                                 (r/send-event events)
                                  (deref defaulted-timeout ::timeout))
                              (catch InterruptedException e
                                ;; Intentionally pass.
