@@ -91,7 +91,8 @@ Add the following lifecycle.
 
 ```clojure
 {:lifecycle/task :all ; or :task-name for an individual task
- :lifecycle/calls :onyx.lifecycle.metrics.websocket/calls
+ :lifecycle/calls :onyx.lifecycle.metrics.metrics/calls
+ :metrics/sender-fn :onyx.lifecycle.metrics.websocket/websocket-sender
  :websocket/address "ws://127.0.0.1:3000/metrics"
  :lifecycle/doc "Instruments a task's metrics to a websocket."}
 ```
