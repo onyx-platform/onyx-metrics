@@ -32,7 +32,7 @@ Send all metrics to a Riemann instance on a single thread. Events are buffered i
 First, add the clojure riemann client dependency to your project. e.g.
 ```clojure
 [riemann-clojure-client "0.4.1"]
-
+```
 
 In your peer boot-up namespace:
 
@@ -91,7 +91,8 @@ Add the following lifecycle.
 
 ```clojure
 {:lifecycle/task :all ; or :task-name for an individual task
- :lifecycle/calls :onyx.lifecycle.metrics.websocket/calls
+ :lifecycle/calls :onyx.lifecycle.metrics.metrics/calls
+ :metrics/sender-fn :onyx.lifecycle.metrics.websocket/websocket-sender
  :websocket/address "ws://127.0.0.1:3000/metrics"
  :lifecycle/doc "Instruments a task's metrics to a websocket."}
 ```
