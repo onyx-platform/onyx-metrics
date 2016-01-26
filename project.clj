@@ -1,4 +1,4 @@
-(defproject org.onyxplatform/onyx-metrics "0.8.5.1-SNAPSHOT"
+(defproject org.onyxplatform/onyx-metrics "0.8.6.0"
   :description "Instrument Onyx workflows"
   :url "https://github.com/MichaelDrogalis/onyx"
   :license {:name "Eclipse Public License"
@@ -12,7 +12,7 @@
                              :password :env
                              :sign-releases false}}
   :dependencies [^{:voom {:repo "git@github.com:onyx-platform/onyx.git" :branch "master"}}
-                 [org.onyxplatform/onyx "0.8.5"]
+                 [org.onyxplatform/onyx "0.8.6"]
                  [org.clojure/clojure "1.7.0"]
                  [interval-metrics "1.0.0"]
                  [stylefruits/gniazdo "0.4.0"]]
