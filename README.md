@@ -118,7 +118,7 @@ In your peer boot-up namespace:
  :metrics/buffer-capacity      10000
  :metrics/workflow-name        "your-work-flow-name"
  :metrics/sender-fn            :onyx.metrics.dogstatsd/dogstatsd-sender
- :dogstatsd/url                "localhost:8125 "
+ :dogstatsd/url                "localhost:8125"
  :dogstatsd/global-tags        ["tag1" "tag2" "tag3"] ;; optional 
  :dogstatsd/global-sample-rate 100 ;; optional 
  :lifecycle/doc                "Instruments a task's metrics and sends to a datadog agent"
@@ -127,7 +127,7 @@ In your peer boot-up namespace:
 More detailed information on dogstatsd related settings can be found
 [here](https://github.com/Cognician/dogstatsd-clj).
 
-### Handy Tip}
+### Handy Tip
 
 Sometimes, you may want a quick way to instrument all the tasks in a workflow.
 This can be achieved by using :lifecycle/task :all for your given lifecycles.
