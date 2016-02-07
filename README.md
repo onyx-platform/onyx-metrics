@@ -97,8 +97,37 @@ Add the following lifecycle.
  :lifecycle/doc "Instruments a task's metrics to a websocket."}
 ```
 
+##### DogstatsD metrics
 
-### Handy Tip
+Send all metrics to a DogstatsD agent on a single thread.
+
+First, add the clojure DogstatsD client dependency to your project. e.g.
+```clojure
+[cognician/dogstatsd-clj "0.1.1"] 
+```
+In your peer boot-up namespace:
+
+```clojure
+(:require [onyx.lifecycle.metrics.metrics]
+          [onyx.lifecycle.metrics.dogstatsd])
+```
+
+```clojure
+{:lifecycle/task               :all
+ :lifecycle/calls              :onyx.lifecycle.metrics.metrics/calls
+ :metrics/buffer-capacity      10000
+ :metrics/workflow-name        "your-work-flow-name"
+ :metrics/sender-fn            :onyx.metrics.dogstatsd/dogstatsd-sender
+ :dogstatsd/url                "localhost:8125 "
+ :dogstatsd/global-tags        ["tag1" "tag2" "tag3"] ;; optional 
+ :dogstatsd/global-sample-rate 100 ;; optional 
+ :lifecycle/doc                "Instruments a task's metrics and sends to a datadog agent"
+```
+
+More detailed information on dogstatsd related settings can be found
+[here](https://github.com/Cognician/dogstatsd-clj).
+
+### Handy Tip}
 
 Sometimes, you may want a quick way to instrument all the tasks in a workflow.
 This can be achieved by using :lifecycle/task :all for your given lifecycles.
