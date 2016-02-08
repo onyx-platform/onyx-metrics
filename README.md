@@ -7,7 +7,7 @@ Onyx Lifecycle plugin for instrumenting workflows. Track throughput and metrics 
 In your project file:
 
 ```clojure
-[org.onyxplatform/onyx-metrics "0.8.8.1-SNAPSHOT"]
+[org.onyxplatform/onyx-metrics "0.8.8.2-SNAPSHOT"]
 ```
 
 #### Metrics
@@ -97,6 +97,35 @@ Add the following lifecycle.
  :lifecycle/doc "Instruments a task's metrics to a websocket."}
 ```
 
+##### DogstatsD metrics
+
+Send all metrics to a DogstatsD agent on a single thread.
+
+First, add the clojure DogstatsD client dependency to your project. e.g.
+```clojure
+[cognician/dogstatsd-clj "0.1.1"] 
+```
+In your peer boot-up namespace:
+
+```clojure
+(:require [onyx.lifecycle.metrics.metrics]
+          [onyx.metrics.dogstatsd])
+```
+
+```clojure
+{:lifecycle/task               :all
+ :lifecycle/calls              :onyx.lifecycle.metrics.metrics/calls
+ :metrics/buffer-capacity      10000
+ :metrics/workflow-name        "your-work-flow-name"
+ :metrics/sender-fn            :onyx.metrics.dogstatsd/dogstatsd-sender
+ :dogstatsd/url                "localhost:8125"
+ :dogstatsd/global-tags        ["tag1" "tag2" "tag3"] ;; optional 
+ :dogstatsd/global-sample-rate 0.5 ;; optional 
+ :lifecycle/doc                "Instruments a task's metrics and sends to a datadog agent"}
+```
+
+More detailed information on dogstatsd related settings can be found
+[here](https://github.com/Cognician/dogstatsd-clj).
 
 ### Handy Tip
 
