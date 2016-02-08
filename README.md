@@ -120,7 +120,7 @@ In your peer boot-up namespace:
  :metrics/sender-fn            :onyx.metrics.dogstatsd/dogstatsd-sender
  :dogstatsd/url                "localhost:8125"
  :dogstatsd/global-tags        ["tag1" "tag2" "tag3"] ;; optional 
- :dogstatsd/global-sample-rate 100 ;; optional 
+ :dogstatsd/global-sample-rate 0.5 ;; optional 
  :lifecycle/doc                "Instruments a task's metrics and sends to a datadog agent"
 ```
 
