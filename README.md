@@ -109,7 +109,7 @@ In your peer boot-up namespace:
 
 ```clojure
 (:require [onyx.lifecycle.metrics.metrics]
-          [onyx.lifecycle.metrics.dogstatsd])
+          [onyx.metrics.dogstatsd])
 ```
 
 ```clojure
