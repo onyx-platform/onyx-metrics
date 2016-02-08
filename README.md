@@ -121,7 +121,7 @@ In your peer boot-up namespace:
  :dogstatsd/url                "localhost:8125"
  :dogstatsd/global-tags        ["tag1" "tag2" "tag3"] ;; optional 
  :dogstatsd/global-sample-rate 0.5 ;; optional 
- :lifecycle/doc                "Instruments a task's metrics and sends to a datadog agent"
+ :lifecycle/doc                "Instruments a task's metrics and sends to a datadog agent"}
 ```
 
 More detailed information on dogstatsd related settings can be found
