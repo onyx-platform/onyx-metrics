@@ -20,7 +20,8 @@
   :global-vars  {*warn-on-reflection* true
                  *assert* false
                  *unchecked-math* :warn-on-boxed}
-  :profiles {:dev {:dependencies [[riemann-clojure-client "0.4.1"]]
+  :profiles {:dev {:dependencies [[riemann-clojure-client "0.4.1"]
+                                  [cognician/dogstatsd-clj "0.1.1"]]
                    :plugins [[lein-set-version "0.4.1"]
                              [lein-update-dependency "0.1.2"]
                              [lein-pprint "1.1.1"]]}})
