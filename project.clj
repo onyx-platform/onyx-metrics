@@ -12,7 +12,7 @@
                              :password :env
                              :sign-releases false}}
   :dependencies [^{:voom {:repo "git@github.com:onyx-platform/onyx.git" :branch "master"}}
-                 [org.onyxplatform/onyx "0.8.10-20160212_114915-g8bf3ab6"]
+                 [org.onyxplatform/onyx "0.8.10-alpha2"]
                  [org.clojure/clojure "1.7.0"]
                  [interval-metrics "1.0.0"]
                  [stylefruits/gniazdo "0.4.0"]]
