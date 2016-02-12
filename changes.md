@@ -1,3 +1,6 @@
+# 0.8.8.1
+- Added datadog metrics sender, contributed by [Cognician](http://www.cognician.com/)!
+
 # 0.8.2.6
 - Fix bug where throughput would only be recorded for input tasks.
 
