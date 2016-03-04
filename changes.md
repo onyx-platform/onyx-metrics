@@ -1,3 +1,13 @@
+# 0.9.0
+- Added NewRelic metrics sender contributed by LockedOn (http://www.lockedon.com).
+- Deprecated `:metrics/workflow-name`. Use job metadata via your job submission like so:
+
+```clojure
+{:workflow ...
+ :lifecycles ...
+ :metadata {:name "YOURJOBNAME"}}
+```
+
 # 0.8.8.1
 - Added datadog metrics sender, contributed by [Cognician](http://www.cognician.com/)!
 

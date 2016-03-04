@@ -1,4 +1,4 @@
-(ns onyx.metrics.send-test
+(ns onyx.metrics.new-relic-test
   (:require [clojure.core.async :refer [chan >!! <!! close! sliding-buffer]]
             [clojure.test :refer [deftest is testing]]
             [onyx.plugin.core-async :refer [take-segments!]]
@@ -9,6 +9,7 @@
             [onyx.lifecycle.metrics.metrics]
             [onyx.lifecycle.metrics.timbre]
             [onyx.monitoring.events :as monitoring]
+            [onyx.metrics.newrelic]
             [onyx.lifecycle.metrics.riemann :as riemann]
             [onyx.lifecycle.metrics.websocket]
             [onyx.api]))
@@ -18,58 +19,10 @@
 (defn my-inc [{:keys [n] :as segment}]
   (assoc segment :n (inc n)))
 
-(def valid-tag-combos
-  #{["throughput_1s" "onyx" ":out" "test-workflow"]
-    ["throughput_1s" "onyx" ":inc" "test-workflow"]
-    ["throughput_1s" "onyx" ":in" "test-workflow"]
-    ["throughput_10s" "onyx" ":inc" "test-workflow"]
-    ["throughput_10s" "onyx" ":in" "test-workflow"]
-    ["throughput_10s" "onyx" ":out" "test-workflow"]
-    ["throughput_60s" "onyx" ":inc" "test-workflow"]
-    ["throughput_60s" "onyx" ":in" "test-workflow"]
-    ["throughput_60s" "onyx" ":out" "test-workflow"]
-
-    ["batch_latency_max" "onyx" ":out" "test-workflow"]
-    ["batch_latency_max" "onyx" ":inc" "test-workflow"]
-    ["batch_latency_max" "onyx" ":in" "test-workflow"]
-    ["batch_latency_99_9th" "onyx" ":in" "test-workflow"]
-    ["batch_latency_99_9th" "onyx" ":inc" "test-workflow"]
-    ["batch_latency_99_9th" "onyx" ":out" "test-workflow"]
-    ["batch_latency_99th" "onyx" ":in" "test-workflow"]
-    ["batch_latency_99th" "onyx" ":inc" "test-workflow"]
-    ["batch_latency_99th" "onyx" ":out" "test-workflow"]
-    ["batch_latency_90th" "onyx" ":inc" "test-workflow"]
-    ["batch_latency_90th" "onyx" ":in" "test-workflow"]
-    ["batch_latency_90th" "onyx" ":out" "test-workflow"]
-    ["batch_latency_50th" "onyx" "50_percentile" ":out" "test-workflow"]
-    ["batch_latency_50th" "onyx" "50_percentile" ":inc" "test-workflow"]
-    ["batch_latency_50th" "onyx" "50_percentile" ":in" "test-workflow"]
-
-    ["pending_messages_count" "onyx" ":in" "test-workflow"]
-
-    ["complete_latency_max" "onyx" ":in" "test-workflow"]
-    ["complete_latency_99_9th" "onyx" ":in" "test-workflow"]
-    ["complete_latency_99th" "onyx" ":in" "test-workflow"]
-    ["complete_latency_90th" "onyx" ":in" "test-workflow"]
-    ["complete_latency_50th" "onyx" "50_percentile" ":in" "test-workflow"]
-
-    []
-
-    ["onyx" "peer.complete-message.latency max"]
-    ["onyx" "peer.ack-segments.latency max"]
-
-    ["monitoring-config" ":in"] 
-    ["monitoring-config" ":out"]
-    ["monitoring-config" ":inc"]
-
-    ["retry_segment_rate_1s" "onyx" ":in" "test-workflow"]})
+(def failure? (atom false))
 
 (deftest metrics-test
-  (doseq [sender [;:onyx.lifecycle.metrics.websocket/websocket-sender
-
-                  ;; cannot test timbre-sender as info is a macro?
-                  ;:onyx.lifecycle.metrics.timbre/timbre-sender
-                  :onyx.lifecycle.metrics.riemann/riemann-sender]] 
+  (doseq [sender [:onyx.metrics.newrelic/newrelic-sender]] 
 
     (def in-chan (chan (inc n-messages)))
 
@@ -88,15 +41,9 @@
       {:lifecycle/before-task-start inject-out-ch})
 
     (let [events-atom (atom [])] 
-      (with-redefs [riemann.client/tcp-client (fn [opts] nil)
-                    riemann.client/send-events (fn [_ events] 
-                                                (swap! events-atom into events)
-                                                (future :sent))
-                    ;taoensso.timbre/info (fn [& vs]
-                    ;                       (swap! events conj :print))
-                    gniazdo.core/connect (fn [_])
-                    gniazdo.core/send-msg (fn [_ v]
-                                            (swap! events-atom conj v))] 
+      (with-redefs [onyx.metrics.newrelic/warn-failure (fn [a b] 
+                                                         (println "Failed request " a b)
+                                                         (reset! failure? true))] 
         (let [id (java.util.UUID/randomUUID)
               env-config {:zookeeper/address "127.0.0.1:2188"
                           :zookeeper/server? true
@@ -109,11 +56,9 @@
                            :onyx.messaging/allow-short-circuit? false
                            :onyx.messaging/peer-port 40200
                            :onyx.messaging/bind-addr "localhost"}
-              host-id (str (java.util.UUID/randomUUID))
-              monitoring-config (monitoring/monitoring-config 10000)
-              monitoring-thread (riemann/riemann-sender {:riemann/address "localhost" :riemann/port 12201} 
-                                                        (:monitoring/ch monitoring-config))]
-          (with-test-env [test-env [3 env-config peer-config monitoring-config]]
+              ;; TODO, doesn't currently test monitoring
+              ]
+          (with-test-env [test-env [3 env-config peer-config]]
             (let [batch-size 20
                   catalog [{:onyx/name :in
                             :onyx/plugin :onyx.plugin.core-async/input
@@ -144,10 +89,6 @@
 
                               {:lifecycle/task :all
                                :lifecycle/calls :onyx.lifecycle.metrics.metrics/calls
-                               :websocket/address "ws://127.0.0.1:3000/metrics"
-                               :metrics/buffer-capacity 10000
-                               :riemann/address "localhost"
-                               :riemann/port 12201
                                :metrics/sender-fn sender
                                :lifecycle/doc "Instruments a task's metrics"}
 
@@ -168,14 +109,5 @@
                                           :lifecycles lifecycles
                                           :task-scheduler :onyx.task-scheduler/balanced})
                   results (take-segments! out-chan)
-                  _ (onyx.api/await-job-completion peer-config (:job-id job))
-                  end-time (System/currentTimeMillis)]
-              (let [expected (set (map (fn [x] {:n (inc x)}) (range n-messages)))]
-                (is (= expected (set (butlast results))))
-                (is (= :done (last results)))
-                (is (= valid-tag-combos (set (map (comp vec butlast :tags) @events-atom))))
-                (is (nil? (some #(not (instance? java.lang.String %)) (mapcat :tags @events-atom))))
-                (is (> (count @events-atom) (* 3 ; number of tasks
-                                               (/ (- end-time start-time) 1000)
-                                               ;; only approximate because of brittle test on CI
-                                               3)))))))))))
+                  _ (onyx.api/await-job-completion peer-config (:job-id job))]
+              (is (not @failure?)))))))))
