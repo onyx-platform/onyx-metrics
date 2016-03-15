@@ -1,4 +1,4 @@
-(defproject org.onyxplatform/onyx-metrics "0.8.11.1-SNAPSHOT"
+(defproject org.onyxplatform/onyx-metrics "0.9.0.0-alpha11"
   :description "Instrument Onyx workflows"
   :url "https://github.com/MichaelDrogalis/onyx"
   :license {:name "Eclipse Public License"
@@ -11,16 +11,18 @@
                              :username :env
                              :password :env
                              :sign-releases false}}
-  :dependencies [^{:voom {:repo "git@github.com:onyx-platform/onyx.git" :branch "master"}}
-                 [org.onyxplatform/onyx "0.8.11"]
+  :dependencies [[org.onyxplatform/onyx "0.9.0-alpha11"]
+                 ^{:voom {:repo "git@github.com:onyx-platform/onyx.git" :branch "master"}}
                  [org.clojure/clojure "1.7.0"]
-                 [interval-metrics "1.0.0"]
-                 [stylefruits/gniazdo "0.4.0"]]
+                 [interval-metrics "1.0.0"]]
   :java-opts ^:replace ["-server" "-Xmx3g"]
   :global-vars  {*warn-on-reflection* true
                  *assert* false
                  *unchecked-math* :warn-on-boxed}
   :profiles {:dev {:dependencies [[riemann-clojure-client "0.4.1"]
+                                  [stylefruits/gniazdo "0.4.0"]
+                                  [clj-http "2.1.0"]
+                                  [cheshire "5.5.0"]
                                   [cognician/dogstatsd-clj "0.1.1"]]
                    :plugins [[lein-set-version "0.4.1"]
                              [lein-update-dependency "0.1.2"]
