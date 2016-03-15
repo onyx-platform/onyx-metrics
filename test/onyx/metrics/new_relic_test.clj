@@ -21,8 +21,8 @@
 
 (def failure? (atom false))
 
-(deftest metrics-test
-  (doseq [sender [:onyx.metrics.newrelic/newrelic-sender]] 
+#_(deftest metrics-test
+  (doseq [sender [:onyx.metrics.newrelic/newrelic-sender]]
 
     (def in-chan (chan (inc n-messages)))
 
@@ -40,10 +40,10 @@
     (def out-calls
       {:lifecycle/before-task-start inject-out-ch})
 
-    (let [events-atom (atom [])] 
-      (with-redefs [onyx.metrics.newrelic/warn-failure (fn [a b] 
+    (let [events-atom (atom [])]
+      (with-redefs [onyx.metrics.newrelic/warn-failure (fn [a b]
                                                          (println "Failed request " a b)
-                                                         (reset! failure? true))] 
+                                                         (reset! failure? true))]
         (let [id (java.util.UUID/randomUUID)
               env-config {:zookeeper/address "127.0.0.1:2188"
                           :zookeeper/server? true
@@ -103,11 +103,11 @@
                   _ (close! in-chan)
                   start-time (System/currentTimeMillis)
                   job (onyx.api/submit-job peer-config
-                                         {:catalog catalog
-                                          :metadata {:name "test-workflow"}
-                                          :workflow workflow
-                                          :lifecycles lifecycles
-                                          :task-scheduler :onyx.task-scheduler/balanced})
+                                           {:catalog catalog
+                                            :metadata {:name "test-workflow"}
+                                            :workflow workflow
+                                            :lifecycles lifecycles
+                                            :task-scheduler :onyx.task-scheduler/balanced})
                   results (take-segments! out-chan)
                   _ (onyx.api/await-job-completion peer-config (:job-id job))]
               (is (not @failure?)))))))))
