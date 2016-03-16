@@ -21,7 +21,7 @@
 
 (def failure? (atom false))
 
-#_(deftest metrics-test
+(deftest metrics-test
   (doseq [sender [:onyx.metrics.newrelic/newrelic-sender]]
 
     (def in-chan (chan (inc n-messages)))
