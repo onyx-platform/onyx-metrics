@@ -32,7 +32,7 @@
         (str kw-or-s))
       str->dogstatsd-str))
 
-(defn dogstatsd-metric-name*
+(defn dogstatsd-metric-name
   [{:keys [task-name window quantile metric]}]
   (str (kw-or-str->dogstatsd-str task-name) "."
        (when window
@@ -40,9 +40,6 @@
        (when quantile
          (str (quantile->str quantile) "_"))
        (kw-or-str->dogstatsd-str metric)))
-
-;; since we'll be calling this thousands of times, might aswell make it efficient
-(def dogstatsd-metric-name (memoize dogstatsd-metric-name*))
 
 (defn metric->dogstatsd-metric
   [{:keys [value tags] :as metric}]
