@@ -97,7 +97,7 @@ Metrics for the [DataDog](https://www.datadoghq.com/) SaaS. Sends all metrics to
 
 First, add the clojure DogstatsD client dependency to your project. e.g.
 ```clojure
-[cognician/dogstatsd-clj "0.1.1"] 
+[cognician/dogstatsd-clj "0.1.2"] 
 ```
 In your peer boot-up namespace:
 

@@ -1,6 +1,7 @@
 # 0.9.0
 - Added NewRelic metrics sender contributed by LockedOn (http://www.lockedon.com).
 - Deprecated `:metrics/workflow-name`. Use job metadata via your job submission like so:
+- Bumped recommended dogstatsd-clj version as previous version has a memory leak
 
 ```clojure
 {:workflow ...
