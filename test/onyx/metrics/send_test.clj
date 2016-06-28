@@ -11,7 +11,8 @@
             [onyx.monitoring.events :as monitoring]
             [onyx.lifecycle.metrics.riemann :as riemann]
             [onyx.lifecycle.metrics.websocket]
-            [onyx.api]))
+            [onyx.api])
+  (:import [com.codahale.metrics JmxReporter]))
 
 (def n-messages 100000)
 
@@ -110,9 +111,9 @@
                            :onyx.messaging/peer-port 40200
                            :onyx.messaging/bind-addr "localhost"}
               host-id (str (java.util.UUID/randomUUID))
-              monitoring-config (monitoring/monitoring-config 10000)
-              monitoring-thread (riemann/riemann-sender {:riemann/address "localhost" :riemann/port 12201} 
-                                                        (:monitoring/ch monitoring-config))]
+              monitoring-config (monitoring/monitoring-config)
+              reporter (.build (JmxReporter/forRegistry (:registry monitoring-config)))
+              _ (.start ^JmxReporter reporter)]
           (with-test-env [test-env [3 env-config peer-config monitoring-config]]
             (let [batch-size 20
                   catalog [{:onyx/name :in
@@ -166,10 +167,12 @@
                                           :metadata {:name "test-workflow"}
                                           :workflow workflow
                                           :lifecycles lifecycles
-                                          :task-scheduler :onyx.task-scheduler/balanced})
+                                          :task-scheduler :onyx.task-scheduler/balanced}
+                                         monitoring-config)
                   results (take-segments! out-chan)
                   _ (onyx.api/await-job-completion peer-config (:job-id job))
                   end-time (System/currentTimeMillis)]
+              (Thread/sleep 100000)
               (let [expected (set (map (fn [x] {:n (inc x)}) (range n-messages)))]
                 (is (= expected (set (butlast results))))
                 (is (= :done (last results)))

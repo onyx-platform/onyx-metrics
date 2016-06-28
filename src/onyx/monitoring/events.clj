@@ -1,354 +1,143 @@
 (ns onyx.monitoring.events
-  (:require [clojure.core.async :refer [chan >!! <!! sliding-buffer alts!! timeout go-loop thread]]
+  (:require [metrics.core :refer [new-registry]]
             [taoensso.timbre :refer [warn info]]
-            [interval-metrics.core :as im]
-            [riemann.client :as r]))
+            [metrics.meters :as m :refer [meter rates]]
+            [metrics.histograms :as h]
+            [metrics.timers :as t]
+            [metrics.gauges :as g]
+            [metrics.counters :as c])
+  (:import [com.codahale.metrics JmxReporter]
+           [java.util.concurrent TimeUnit]))
+;- pattern: metrics<name=(^[^.]+)[.](^[^.]+)[.](^[^.]+)><>(.+)
 
-(defn zookeeper-write-log-entry [ch config {:keys [latency bytes]}]
-  (>!! ch {:service "zookeeper.write-log-entry.latency"
-           :state "ok"
-           :tags ["monitoring-config"]
-           :metric latency})
-  (>!! ch {:service "zookeeper.write-log-entry.bytes"
-           :state "ok"
-           :tags ["monitoring-config"]
-           :metric bytes}))
+(defn update-timer! [^com.codahale.metrics.Timer timer ms]
+  (.update timer ms TimeUnit/MILLISECONDS))
 
-(defn zookeeper-read-log-entry [ch config {:keys [latency bytes]}]
-  (>!! ch {:service "zookeeper.read-log-entry.latency"
-           :state "ok"
-           :tags ["monitoring-config"]
-           :metric latency}))
-
-(defn zookeeper-write-catalog [ch config {:keys [latency bytes]}]
-  (>!! ch {:service "zookeeper.write-catalog.latency"
-           :state "ok"
-           :tags ["monitoring-config"]
-           :metric latency})
-  (>!! ch {:service "zookeeper.write-catalog.bytes"
-           :state "ok"
-           :tags ["monitoring-config"]
-           :metric bytes}))
-
-(defn zookeeper-write-workflow [ch config {:keys [latency bytes]}]
-  (>!! ch {:service "zookeeper.write-workflow.latency"
-           :state "ok"
-           :tags ["monitoring-config"]
-           :metric latency})
-  (>!! ch {:service "zookeeper.write-workflow.bytes"
-           :state "ok"
-           :tags ["monitoring-config"]
-           :metric bytes}))
-
-(defn zookeeper-write-flow-conditions [ch config {:keys [latency bytes]}]
-  (>!! ch {:service "zookeeper.write-flow-conditions.latency"
-           :state "ok"
-           :tags ["monitoring-config"]
-           :metric latency})
-  (>!! ch {:service "zookeeper.write-flow-conditions.bytes"
-           :state "ok"
-           :tags ["monitoring-config"]
-           :metric bytes}))
-
-(defn zookeeper-write-lifecycles [ch config {:keys [latency bytes]}]
-  (>!! ch {:service "zookeeper.write-lifecycles.latency"
-           :state "ok"
-           :tags ["monitoring-config"]
-           :metric latency})
-  (>!! ch {:service "zookeeper.write-lifecycles.bytes"
-           :state "ok"
-           :tags ["monitoring-config"]
-           :metric bytes}))
-
-(defn zookeeper-write-task [ch config {:keys [latency bytes]}]
-  (>!! ch {:service "zookeeper.write-task.latency"
-           :state "ok"
-           :tags ["monitoring-config"]
-           :metric latency})
-  (>!! ch {:service "zookeeper.write-task.bytes"
-           :state "ok"
-           :tags ["monitoring-config"]
-           :metric bytes}))
-
-(defn zookeeper-write-chunk [ch config {:keys [latency bytes]}]
-  (>!! ch {:service "zookeeper.write-chunk.latency"
-           :state "ok"
-           :tags ["monitoring-config"]
-           :metric latency})
-  (>!! ch {:service "zookeeper.write-chunk.bytes"
-           :state "ok"
-           :tags ["monitoring-config"]
-           :metric bytes}))
-
-(defn zookeeper-write-job-scheduler [ch config {:keys [latency bytes]}]
-  (>!! ch {:service "zookeeper.write-job-scheduler.latency"
-           :state "ok"
-           :tags ["monitoring-config"]
-           :metric latency})
-  (>!! ch {:service "zookeeper.write-job-scheduler.bytes"
-           :state "ok"
-           :tags ["monitoring-config"]
-           :metric bytes}))
-
-(defn zookeeper-write-messaging [ch config {:keys [latency bytes]}]
-  (>!! ch {:service "zookeeper.write-messaging.latency"
-           :state "ok"
-           :tags ["monitoring-config"]
-           :metric latency})
-  (>!! ch {:service "zookeeper.write-messaging.bytes"
-           :state "ok"
-           :tags ["monitoring-config"]
-           :metric bytes}))
-
-(defn zookeeper-force-write-chunk [ch config {:keys [latency bytes]}]
-  (>!! ch {:service "zookeeper.force-write-chunk.latency"
-           :state "ok"
-           :tags ["monitoring-config"]
-           :metric latency})
-  (>!! ch {:service "zookeeper.force-write-chunk.bytes"
-           :state "ok"
-           :tags ["monitoring-config"]
-           :metric bytes}))
-
-(defn zookeeper-write-origin [ch config {:keys [latency bytes]}]
-  (>!! ch {:service "zookeeper.write-origin.latency"
-           :state "ok"
-           :tags ["monitoring-config"]
-           :metric latency})
-  (>!! ch {:service "zookeeper.write-origin.bytes"
-           :state "ok"
-           :tags ["monitoring-config"]
-           :metric bytes}))
-
-(defn zookeeper-read-catalog [ch config {:keys [latency]}]
-  (>!! ch {:service "zookeeper.read-catalog.latency"
-           :state "ok"
-           :tags ["monitoring-config"]
-           :metric latency}))
-
-(defn zookeeper-read-workflow [ch config {:keys [latency]}]
-  (>!! ch {:service "zookeeper.read-workflow.latency"
-           :state "ok"
-           :tags ["monitoring-config"]
-           :metric latency}))
-
-(defn zookeeper-read-flow-conditions [ch config {:keys [latency]}]
-  (>!! ch {:service "zookeeper.read-flow-conditions.latency"
-           :state "ok"
-           :tags ["monitoring-config"]
-           :metric latency}))
-
-(defn zookeeper-read-lifecycles [ch config {:keys [latency]}]
-  (>!! ch {:service "zookeeper.read-lifecycles.latency"
-           :state "ok"
-           :tags ["monitoring-config"]
-           :metric latency}))
-
-(defn zookeeper-read-task [ch config {:keys [latency]}]
-  (>!! ch {:service "zookeeper.read-task.latency"
-           :state "ok"
-           :tags ["monitoring-config"]
-           :metric latency}))
-
-(defn zookeeper-read-chunk [ch config {:keys [latency]}]
-  (>!! ch {:service "zookeeper.read-chunk.latency"
-           :state "ok"
-           :tags ["monitoring-config"]
-           :metric latency}))
-
-(defn zookeeper-read-origin [ch config {:keys [latency]}]
-  (>!! ch {:service "zookeeper.read-origin.latency"
-           :state "ok"
-           :tags ["monitoring-config"]
-           :metric latency}))
-
-(defn zookeeper-read-job-scheduler [ch config {:keys [latency]}]
-  (>!! ch {:service "zookeeper.read-job-scheduler.latency"
-           :state "ok"
-           :tags ["monitoring-config"]
-           :metric latency}))
-
-(defn zookeeper-read-messaging [ch config {:keys [latency]}]
-  (>!! ch {:service "zookeeper.read-messaging.latency"
-           :state "ok"
-           :tags ["monitoring-config"]
-           :metric latency}))
-
-(defn zookeeper-gc-log-entry [ch config {:keys [latency position]}]
-  (>!! ch {:service "zookeeper.gc-log-entry.latency"
-           :state "ok"
-           :tags ["monitoring-config"]
-           :metric latency})
-  (>!! ch {:service "zookeeper.gc-log-entry.position"
-           :state "ok"
-           :tags ["monitoring-config"]
-           :metric position}))
-
-(defn peer-gc-peer-link [ch config event]
-  (>!! ch {:service "peer.gc-peer-link.event" 
-           :tags ["monitoring-config"]
-           :state "ok"}))
-
-(defn peer-backpressure-on [ch config {:keys [id]}]
-  (>!! ch {:service "peer.backpressure-on.event" 
-           :tags ["monitoring-config"]
-           :state "ok"}))
-
-(defn peer-backpressure-off [ch config {:keys [id]}]
-  (>!! ch {:service "peer.backpressure-off.event" 
-           :tags ["monitoring-config"]
-           :state "ok"}))
-
-(defn peer-prepare-join [ch config {:keys [id]}]
-  (>!! ch {:service "peer.prepare-join.event" 
-           :tags ["monitoring-config"]
-           :state "ok"}))
-
-(defn peer-accept-join [ch config {:keys [id]}]
-  (>!! ch {:service "peer.accept-join.event" 
-           :tags ["monitoring-config"]
-           :state "ok"}))
-
-(defn peer-notify-join [ch config {:keys [id]}]
-  (>!! ch {:service "peer.notify-join.event" 
-           :tags ["monitoring-config"]
-           :state "ok"}))
-
-(defn peer-try-complete-job [ch config event]
-  (>!! ch {:service "peer.try-complete-job.event" 
-           :tags ["monitoring-config"]
-           :state "ok"}))
-
-;; Frequent, perf sensitive operations
-(defn peer-ack-segments [rate+latency config {:keys [latency]}]
-  (im/update! rate+latency latency))
-
-(defn peer-retry-segment [rate+latency config {:keys [latency]}]
-  (im/update! rate+latency latency))
-
-(defn peer-complete-message [rate+latency config {:keys [latency]}]
-  (im/update! rate+latency latency))
-
-(defn window-log-compaction [rate+latency config {:keys [latency]}]
-  (im/update! rate+latency latency))
-
-(defn window-log-playback [rate+latency config {:keys [latency]}]
-  (im/update! rate+latency latency))
-
-(defn window-log-write-entry [rate+latency config {:keys [latency]}]
-  (im/update! rate+latency latency))
-
-(defn snapshot-latencies+event [service rate+latency]
-  (let [latency-snapshot (im/snapshot! rate+latency)
-        latencies (:latencies latency-snapshot)]
-    (if-let [value (get latencies 1.0)]
-      {:service service
-       :window "1s"
-       :quantile 1.0
-       :value value
-       :tags ["onyx" service "latency"]})))
-
-(defn messenger-queue-count [monitoring-config queue-count event]
-  (let [{:keys [id task]} (:task-information monitoring-config)] 
-    (swap! queue-count (fn [m] (assoc m (list id (:name task)) (:count event))))))
-
-(defn messenger-queue-count-unregister [monitoring-config queue-count event]
-  (let [{:keys [id task]} (:task-information monitoring-config)] 
-    (swap! queue-count dissoc (list id (:name task)))))
-
-(defn monitoring-config [buf-capacity]
-  (let [ch (chan (sliding-buffer buf-capacity))
-        complete-message-latency (im/rate+latency {:rate-unit :milliseconds
-                                                   :latencies :milliseconds
-                                                   :quantiles [0.5 0.9 0.95 0.99 0.999 1.0]})
-        retry-message-latency (im/rate+latency {:rate-unit :milliseconds
-                                                :latencies :milliseconds
-                                                :quantiles [0.5 0.9 0.95 0.99 0.999 1.0]})
-
-        ack-segments-latency (im/rate+latency {:rate-unit :milliseconds
-                                               :latencies :milliseconds
-                                               :quantiles [0.5 0.9 0.95 0.99 0.999 1.0]})
-
-        window-log-playback-latency (im/rate+latency {:rate-unit :milliseconds
-                                                      :latencies :milliseconds
-                                                      :quantiles [0.5 0.9 0.95 0.99 0.999 1.0]})
-
-        window-log-write-latency (im/rate+latency {:rate-unit :milliseconds
-                                                   :latencies :milliseconds
-                                                   :quantiles [0.5 0.9 0.95 0.99 0.999 1.0]})
-
-        window-log-compaction-latency (im/rate+latency {:rate-unit :milliseconds
-                                                        :latencies :milliseconds
-                                                        :quantiles [0.5 0.9 0.95 0.99 0.999 1.0]})
-        messenger-queue-counts (atom {})
-        periodic-ch (go-loop []
-                             (let [timeout-ch (timeout 1000)
-                                   v (<!! timeout-ch)]
-                               (run! (fn [[[peer-id task-name] cnt]]
-                                       (>!! ch {:service (str (format "[%s] task-messenger-buffer-count" task-name)) 
-                                                :value cnt 
-                                                :tags ["monitoring-config" (str task-name) (str peer-id)]
-                                                :state "ok"}))
-                                     @messenger-queue-counts)
-                               ;; TODO, further segment peer-ack-segments, peer-retry-segments, peer-complete-segment by task-id
-                               (some->> ack-segments-latency
-                                        (snapshot-latencies+event "peer.ack-segments.latency max")
-                                        (>!! ch))
-                               (some->> complete-message-latency
-                                        (snapshot-latencies+event "peer.complete-message.latency max")
-                                        (>!! ch))
-                               (some->> retry-message-latency
-                                        (snapshot-latencies+event "peer.retry-segment.latency max")
-                                        (>!! ch))
-                               (some->> window-log-playback-latency 
-                                        (snapshot-latencies+event "window.log-playback.latency max")
-                                        (>!! ch))
-                               (some->> window-log-write-latency 
-                                        (snapshot-latencies+event "window.write-log-entry.latency max")
-                                        (>!! ch))
-                               (some->> window-log-compaction-latency 
-                                        (snapshot-latencies+event "window.log-compaction.latency max")
-                                        (>!! ch)))
-                             (recur))]
+(defn monitoring-config []
+  (let [reg (new-registry)
+        write-log-entry-bytes (h/histogram reg ["zookeeper" "write-log-entry" "bytes"])
+        write-log-entry-latency (t/timer reg ["zookeeper" "write-log-entry" "latency"])
+        write-catalog-bytes (h/histogram reg ["zookeeper" "write-catalog" "bytes"])
+        write-catalog-latency (t/timer reg ["zookeeper" "write-catalog" "latency"])
+        write-workflow-bytes (h/histogram reg ["zookeeper" "write-workflow" "bytes"])
+        write-workflow-latency (t/timer reg ["zookeeper" "write-workflow" "latency"])
+        write-flow-conditions-bytes (h/histogram reg ["zookeeper" "write-flow-conditions" "bytes"])
+        write-flow-conditions-latency (t/timer reg ["zookeeper" "write-flow-conditions" "latency"])
+        write-lifecycles-bytes (h/histogram reg ["zookeeper" "write-lifecycles" "bytes"])
+        write-lifecycles-latency (t/timer reg ["zookeeper" "write-lifecycles" "latency"])
+        write-task-bytes (h/histogram reg ["zookeeper" "write-task" "bytes"])
+        write-task-latency (t/timer reg ["zookeeper" "write-task" "latency"])
+        write-chunk-bytes (h/histogram reg ["zookeeper" "write-chunk" "bytes"])
+        write-chunk-latency (t/timer reg ["zookeeper" "write-chunk" "latency"])
+        write-job-scheduler-bytes (h/histogram reg ["zookeeper" "write-job-scheduler" "bytes"])
+        write-job-scheduler-latency (t/timer reg ["zookeeper" "write-job-scheduler" "latency"])
+        write-messaging-bytes (h/histogram reg ["zookeeper" "write-messaging" "bytes"])
+        write-messaging-latency (t/timer reg ["zookeeper" "write-messaging" "latency"])
+        force-write-chunk-bytes (h/histogram reg ["zookeeper" "force-write-chunk" "bytes"])
+        force-write-chunk-latency (t/timer reg ["zookeeper" "force-write-chunk" "latency"])
+        write-origin-bytes (h/histogram reg ["zookeeper" "write-origin" "bytes"])
+        write-origin-latency (t/timer reg ["zookeeper" "write-origin" "latency"])
+        read-log-entry-latency (t/timer reg ["zookeeper" "read-log-entry" "latency"])
+        read-catalog-latency (t/timer reg ["zookeeper" "read-catalog" "latency"])
+        read-workflow-latency (t/timer reg ["zookeeper" "read-workflow" "latency"])
+        read-flow-conditions-latency (t/timer reg ["zookeeper" "read-flow-conditions" "latency"])
+        read-lifecycles-latency (t/timer reg ["zookeeper" "read-lifecycles" "latency"])
+        read-task-latency (t/timer reg ["zookeeper" "read-task" "latency"])
+        read-chunk-latency (t/timer reg ["zookeeper" "read-chunk" "latency"])
+        read-job-scheduler-latency (t/timer reg ["zookeeper" "read-job-scheduler" "latency"])
+        read-messaging-latency (t/timer reg ["zookeeper" "read-messaging" "latency"])
+        force-read-chunk-latency (t/timer reg ["zookeeper" "force-read-chunk" "latency"])
+        read-origin-latency (t/timer reg ["zookeeper" "read-origin" "latency"])
+        gc-log-entry-position (g/gauge reg ["zookeeper" "gc-log-entry" "position"])
+        gc-log-entry-latency (t/timer reg ["zookeeper" "gc-log-entry" "latency"])
+        peer-gc-peer-link-cnt (c/counter reg ["peer" "gc-peer-link" "event"])
+        peer-backpressure-on-cnt (c/counter reg ["peer" "backpressure-on" "event"])
+        peer-backpressure-off-cnt (c/counter reg ["peer" "backpressure-off" "event"])
+        peer-try-complete-job-cnt (c/counter reg ["peer" "try-complete-job" "event"])
+        group-prepare-join-cnt (c/counter reg ["group" "prepare-join" "event"])
+        group-accept-join-cnt (c/counter reg ["group" "accept-join" "event"])
+        group-notify-join-cnt (c/counter reg ["group" "notify-join" "event"])]
     {:monitoring :custom
-     :monitoring/ch ch
-     :zookeeper-write-log-entry (partial zookeeper-write-log-entry ch)
-     :zookeeper-read-log-entry (partial zookeeper-read-log-entry ch)
-     :zookeeper-write-workflow (partial zookeeper-write-workflow ch)
-     :zookeeper-write-catalog (partial zookeeper-write-catalog ch)
-     :zookeeper-write-flow-conditions (partial zookeeper-write-flow-conditions ch)
-     :zookeeper-write-lifecycles (partial zookeeper-write-lifecycles ch)
-     :zookeeper-write-task (partial zookeeper-write-task ch)
-     :zookeeper-write-chunk (partial zookeeper-write-chunk ch)
-     :zookeeper-write-job-scheduler (partial zookeeper-write-job-scheduler ch)
-     :zookeeper-write-messaging (partial zookeeper-write-messaging ch)
-     :zookeeper-force-write-chunk (partial zookeeper-force-write-chunk ch)
-     :zookeeper-write-origin (partial zookeeper-write-origin ch)
-     :zookeeper-read-catalog (partial zookeeper-read-catalog ch)
-     :zookeeper-read-workflow (partial zookeeper-read-workflow ch)
-     :zookeeper-read-flow-conditions (partial zookeeper-read-flow-conditions ch)
-     :zookeeper-read-lifecycles (partial zookeeper-read-lifecycles ch)
-     :zookeeper-read-task (partial zookeeper-read-task ch)
-     :zookeeper-read-chunk (partial zookeeper-read-chunk ch)
-     :zookeeper-read-origin (partial zookeeper-read-origin ch)
-     :zookeeper-read-job-scheduler (partial zookeeper-read-job-scheduler ch)
-     :zookeeper-read-messaging (partial zookeeper-read-messaging ch)
-     :zookeeper-gc-log-entry (partial zookeeper-gc-log-entry ch)
-     :peer-gc-peer-link (partial peer-gc-peer-link ch)
-     :peer-backpressure-on (partial peer-backpressure-on ch)
-     :peer-backpressure-off (partial peer-backpressure-off ch)
-     :peer-prepare-join (partial peer-prepare-join ch)
-     :peer-notify-join (partial peer-notify-join ch)
-     :peer-accept-join (partial peer-accept-join ch)
-     ;; Perf sensitive operations
-     :messenger-queue-count (fn [config op] 
-                              (messenger-queue-count config messenger-queue-counts op))
-     :messenger-queue-count-unregister (fn [config op] 
-                                         (messenger-queue-count-unregister config messenger-queue-counts op))
-     ;; TODO, further segment peer-ack-segments, peer-retry-segments, peer-complete-segment by task-id
-     :peer-ack-segments (fn [config op] (peer-ack-segments ack-segments-latency config op))
-     :peer-retry-segment (fn [config op] (peer-retry-segment retry-message-latency config op))
-     :peer-complete-segment (fn [config op] (peer-complete-message complete-message-latency config op))
-     :window-log-compaction (fn [config op] (window-log-compaction window-log-compaction-latency  config op))
-     :window-log-playback (fn [config op] (window-log-playback window-log-playback-latency config op))
-     :window-log-write-entry (fn [config op] (window-log-write-entry window-log-write-latency config op))}))
+     :registry reg
+     :zookeeper-write-log-entry (fn [config metric] 
+                                  (h/update! write-log-entry-bytes (:bytes metric))
+                                  (update-timer! write-log-entry-latency (:latency metric)))
+     :zookeeper-write-catalog (fn [config metric] 
+                                (h/update! write-catalog-bytes (:bytes metric))
+                                (update-timer! write-catalog-latency (:latency metric)))
+     :zookeeper-write-workflow (fn [config metric] 
+                                 (h/update! write-workflow-bytes (:bytes metric))
+                                 (update-timer! write-workflow-latency (:latency metric)))
+     :zookeeper-write-flow-conditions (fn [config metric] 
+                                        (h/update! write-flow-conditions-bytes (:bytes metric))
+                                        (update-timer! write-flow-conditions-latency (:latency metric)))
+     :zookeeper-write-lifecycles (fn [config metric] 
+                                   (h/update! write-lifecycles-bytes (:bytes metric))
+                                   (update-timer! write-lifecycles-latency (:latency metric)))
+     :zookeeper-write-task (fn [config metric] 
+                             (h/update! write-task-bytes (:bytes metric))
+                             (update-timer! write-task-latency (:latency metric)))
+     :zookeeper-write-chunk (fn [config metric] 
+                              (h/update! write-task-bytes (:bytes metric))
+                              (update-timer! write-task-latency (:latency metric)))
+     :zookeeper-write-job-scheduler (fn [config metric] 
+                                      (h/update! write-job-scheduler-bytes (:bytes metric))
+                                      (update-timer! write-job-scheduler-latency (:latency metric)))
+     :zookeeper-write-messaging (fn [config metric] 
+                                  (h/update! write-messaging-bytes (:bytes metric))
+                                  (update-timer! write-messaging-latency (:latency metric)))
+     :zookeeper-force-write-chunk (fn [config metric] 
+                                    (h/update! force-write-chunk-bytes (:bytes metric))
+                                    (update-timer! force-write-chunk-latency (:latency metric)))
+     :zookeeper-write-origin (fn [config metric] 
+                               (h/update! write-origin-bytes (:bytes metric))
+                               (update-timer! write-origin-latency (:latency metric)))
+     :zookeeper-read-log-entry (fn [config metric] 
+                               (update-timer! read-log-entry-latency (:latency metric)))
+     :zookeeper-read-catalog (fn [config metric] 
+                               (update-timer! read-catalog-latency (:latency metric)))
+     :zookeeper-read-workflow (fn [config metric] 
+                               (update-timer! read-workflow-latency (:latency metric)))
+     :zookeeper-read-flow-conditions (fn [config metric] 
+                               (update-timer! read-flow-conditions-latency (:latency metric)))
+     :zookeeper-read-lifecycles (fn [config metric] 
+                               (update-timer! read-lifecycles-latency (:latency metric)))
+     :zookeeper-read-task (fn [config metric] 
+                               (update-timer! read-task-latency (:latency metric)))
+     :zookeeper-read-chunk (fn [config metric] 
+                               (update-timer! read-chunk-latency (:latency metric)))
+     :zookeeper-read-origin (fn [config metric] 
+                               (update-timer! read-origin-latency (:latency metric)))
+     :zookeeper-read-job-scheduler (fn [config metric] 
+                               (update-timer! read-job-scheduler-latency (:latency metric)))
+     :zookeeper-read-messaging (fn [config metric] 
+                               (update-timer! read-messaging-latency (:latency metric)))
+     :zookeeper-gc-log-entry (fn [config metric] 
+                               (h/update! gc-log-entry-position (:position metric))
+                               (update-timer! gc-log-entry-latency (:latency metric)))
+     :peer-gc-peer-link (fn [config metric] 
+                          (c/inc! peer-gc-peer-link-cnt))
+     :peer-backpressure-on (fn [config metric] 
+                          (c/inc! peer-backpressure-on-cnt))
+     :peer-backpressure-off (fn [config metric] 
+                              (c/inc! peer-backpressure-off-cnt))
+     :group-prepare-join (fn [config metric] 
+                              (c/inc! group-prepare-join-cnt))
+     :group-notify-join (fn [config metric] 
+                              (c/inc! group-notify-join-cnt))
+     :group-accept-join (fn [config metric] 
+                         (c/inc! group-accept-join-cnt))
+     ;  ;; Perf sensitive operations
+     ;  :messenger-queue-count (fn [config op] 
+     ;                           (messenger-queue-count config messenger-queue-counts op))
+     ;  :messenger-queue-count-unregister (fn [config op] 
+     ;                                      (messenger-queue-count-unregister config messenger-queue-counts op))
+     ;  ;; TODO, further segment peer-ack-segments, peer-retry-segments, peer-complete-segment by task-id
+     ;  :peer-ack-segments (fn [config op] (peer-ack-segments ack-segments-latency config op))
+     ;  :peer-retry-segment (fn [config op] (peer-retry-segment retry-message-latency config op))
+     ;  :peer-complete-segment (fn [config op] (peer-complete-message complete-message-latency config op))
+     ;  :window-log-compaction (fn [config op] (window-log-compaction window-log-compaction-latency  config op))
+     ;  :window-log-playback (fn [config op] (window-log-playback window-log-playback-latency config op))
+     ;  :window-log-write-entry (fn [config op] (window-log-write-entry window-log-write-latency config op))
+     }
+     ))
