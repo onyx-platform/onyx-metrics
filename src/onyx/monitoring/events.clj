@@ -8,7 +8,6 @@
             [metrics.counters :as c])
   (:import [com.codahale.metrics JmxReporter]
            [java.util.concurrent TimeUnit]))
-;- pattern: metrics<name=(^[^.]+)[.](^[^.]+)[.](^[^.]+)><>(.+)
 
 (defn update-timer! [^com.codahale.metrics.Timer timer ms]
   (.update timer ms TimeUnit/MILLISECONDS))

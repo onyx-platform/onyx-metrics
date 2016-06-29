@@ -26,7 +26,6 @@
                               "-Dcom.sun.management.jmxremote.port=5555"
                               "-Dcom.sun.management.jmxremote.authenticate=false"
                               "-Dcom.sun.management.jmxremote.ssl=false"
-                              "-Dcom.sun.management.jmxremote.password.file=/Users/lucas/jmxremote.password"
                               "-XX:StartFlightRecording=duration=1080s,filename=recording.jfr"]
                    :dependencies [[riemann-clojure-client "0.4.1"]
                                   [stylefruits/gniazdo "0.4.0"]
