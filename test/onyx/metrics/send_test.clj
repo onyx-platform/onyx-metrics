@@ -53,14 +53,12 @@
     ["complete_latency_90th" "onyx" ":in" "test-workflow"]
     ["complete_latency_50th" "onyx" "50_percentile" ":in" "test-workflow"]
 
-    []
-
-    ["onyx" "peer.complete-message.latency max"]
-    ["onyx" "peer.ack-segments.latency max"]
-
-    ["monitoring-config" ":in"] 
-    ["monitoring-config" ":out"]
-    ["monitoring-config" ":inc"]
+    ;[]
+    ;["onyx" "peer.complete-message.latency max"]
+    ;["onyx" "peer.ack-segments.latency max"]
+    ;["monitoring-config" ":in"] 
+    ;["monitoring-config" ":out"]
+    ;["monitoring-config" ":inc"]
 
     ["retry_segment_rate_1s" "onyx" ":in" "test-workflow"]})
 
