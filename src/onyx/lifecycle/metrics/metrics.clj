@@ -2,7 +2,7 @@
   (:require [clojure.core.async :refer [chan >!! <!! dropping-buffer]]
             [taoensso.timbre :refer [info warn fatal]]
             [clojure.set :refer [rename-keys]]
-            [onyx.peer.operation :refer [kw->fn]]
+            [onyx.static.util :refer [kw->fn]]
             [interval-metrics.core :as im]))
 
 (def historical-throughput-max-count 1000)
