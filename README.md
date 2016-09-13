@@ -77,7 +77,7 @@ Add the following lifecycle.
 
 #### Websocket output
 
-Sends all metric data to a websocket. The Onyx dashboard already knows what to do with this output, but you can direct it anywhere.
+Sends all metric data to a websocket.
 
 In your peer boot-up namespace:
 
