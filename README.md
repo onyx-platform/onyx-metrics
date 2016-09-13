@@ -18,18 +18,20 @@ correctly e.g sum throughputs, average/max/min complete latencies, etc.
 
 ##### Segment Completions
 
-Complete latency measures the amount of time in ms that a segment,
-emitted by an input task, takes to be fully acked through all tasks in the job. Onyx's
-messaging model works by tracking all segments that result from operations on
-the input segment at each task. Complete latency gives an excellent indication of the
-end to end processing time for segments through an entire job.
+**Task types:** input
 
-Tags:
+**Tags:**
 * complete_latency_50th - complete latency (ms), 50th percentile, calculated over 10s period
 * complete_latency_90th - complete latency (ms), 90th percentile, calculated over 10s period 
 * complete_latency_99th - complete latency (ms), 99th percentile, calculated over 10s period
 * complete_latency_99_9th - complete latency (ms), 99.9th percentile, calculated over 10s period
 * complete_latency_max - complete latency (ms), maximum complete latency seen over 10s period
+
+Complete latency measures the amount of time in ms that a segment,
+emitted by an input task, takes to be fully acked through all tasks in the job. Onyx's
+messaging model works by tracking all segments that result from operations on
+the input segment at each task. Complete latency gives an excellent indication of the
+end to end processing time for segments through an entire job.
 
 Complete latencies are measured in milliseconds, and percentiles are calculated
 over a 10s period. For example, complete_latency_50th of 60, means that 50
@@ -47,9 +49,9 @@ on the topic/queue/etc that the plugin is reading from, and therefore the true p
 
 ##### Retries
 
-Task types: input
+**Task types:** input
 
-Tags: 
+**Tags:**
 * retry_segment_rate_1s
 
 Retry segment rate measures total number of segments, emitted from an
@@ -66,9 +68,9 @@ in order to exhibit more backpressure on the pipeline.
 
 ##### Throughput
 
-Task types: input, function, output
+**Task types:** input, function, output
 
-Tags:
+**Tags:**
 * throughput_1s - total number of segments processed by the task, summed over 1s 
 * throughput_10s - total number of segments processed by the task, summed over 10s 
 * throughput_60s - total number of segments processed by the task, summed over 60s 
@@ -86,9 +88,9 @@ result of backpressure resulting from max-pending and a slow pipeline.
 
 ##### Pending Messages Count
 
-Task types: input
+**Task types:** input
 
-Tags:
+**Tags:**
 * pending_messages_count - number of unacked segments that are currently being processed for this task for the job
 
 The number of segments that have been read by an input task, and have not yet been
@@ -99,9 +101,9 @@ i.e. the pipeline is processing segments as soon as they arrive on the input sou
 
 ##### Batch Latency
 
-Task types: input, function, output
+**Task types:** input, function, output
 
-Tags:
+**Tags:**
 * batch_latency_50th - batch latency (ms), 50th percentile, calculated over 10s period
 * batch_latency_90th - batch latency (ms), 90th percentile, calculated over 10s period 
 * batch_latency_99th - batch latency (ms), 99th percentile, calculated over 10s period
