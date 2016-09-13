@@ -15,9 +15,7 @@ First, note that all metrics are reported per peer. Therefore, you must be sure
 to visualize each measurement independently, or to aggregate/roll up reported metrics
 correctly e.g sum throughputs, average/max/min complete latencies, etc.
 
-##### Metrics Types
-
-###### Segment Completions
+#### Segment Completions
 
 Complete latency measures the amount of time, in ms, that it takes a segment
 emitted by an input task to be fully acked through all tasks in the job. Onyx's
@@ -47,7 +45,7 @@ segments that are currently outstanding, which can hurt throughput. Also note,
 that while it may reduce complete latencies, the messages may still be waiting
 on the topic/queue/etc that the plugin is reading from, and therefore the true processing latency may be masked.
 
-###### Retries
+#### Retries
 
 Task types: input
 
@@ -66,7 +64,7 @@ Generally, the correct response is to improve your pipeline's performance,
 and/or reduce [`:onyx/max-pending`](http://www.onyxplatform.org/docs/cheat-sheet/latest/#catalog-entry/:onyx/max-pending)
 in order to exhibit more backpressure on the pipeline.
 
-##### Throughput
+#### Throughput
 
 Task types: input, function, output
 
@@ -86,7 +84,7 @@ slow, but can also result from tasks that are starved. Also note that input task
 unacked segments at a given time, and thus a low input task throughput may be a
 result of backpressure resulting from max-pending and a slow pipeline.
 
-##### Pending Messages Count
+#### Pending Messages Count
 
 Task types: input
 
@@ -99,7 +97,7 @@ able to supply segments quickly enough to have segments up to
 `:onyx/max-pending`, or show that an input source is being drained quickly i.e.
 the pipeline is processing segments as soon as they arrive on the input source.
 
-##### Batch Latency
+#### Batch Latency
 
 Task types: input, function, output
 
