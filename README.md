@@ -9,23 +9,116 @@ In your project file:
 ```clojure
 [org.onyxplatform/onyx-metrics "0.9.10.0-SNAPSHOT"]
 ```
+#### Guide to Types of Metrics & Diagnosing Issues
 
-#### Metrics
+First, note that all metrics are reported per peer. Therefore, you must be sure
+to visualize each measurement independently, or to aggregate/roll up reported metrics
+correctly e.g sum throughputs, average/max/min complete latencies, etc.
 
-Computes the following metrics.
-* 1s, 10s, 60s throughput
-* 50th, 90th, 99th, 99.9th, maxiumum percentile batch latency (time to process a batch, computed every 10s)
-* Input tasks
-  * 1s input segment retries (input segments that have not been processed within :onyx/pending-timeout)
-  * 50th, 90th, 99th, 99.9th, maximum percentile input segment completed latency (time to full process an input segment through the DAG, computed every 10s)
-  * count of pending-messages (messages outstanding) 
+##### Metrics Types
+
+###### Segment Completions
+
+Complete latency measures the amount of time, in ms, that it takes a segment
+emitted by an input task to be fully acked through all tasks in the job. Onyx's
+messaging model works by tracking all segments that result from operations on
+the input segment at each task. Complete latency gives a good indication of the
+end to end latency of segments in your job.
+
+Tags:
+* complete_latency_50th - complete latency (ms) 50th percentile, calculated over 10s period
+* complete_latency_90th - complete latency (ms) 90th percentile, calculated over 10s period 
+* complete_latency_99th - complete latency (ms) 99th percentile, calculated over 10s period
+* complete_latency_99_9th - complete latency (ms) 99.9th percentile, calculated over 10s period
+* complete_latency_max - complete latency (ms) maximum, calculated over 10s period
+
+Complete latencies are measured in milliseconds, and percentiles are calculated
+over a 10s period. For example, complete_latency_50th of 60, means that 50
+percent of segments completed over the 10 second period were fully processed
+within 60ms. If an Onyx job contains a simple job with three tasks `[[:A :B] [:B :C]]`, 
+this means a segment read by `:A`, was sent to `:B`, processed, and
+then sent to `:C`, and processed by the output `:C`, with all generated
+segments acked, within 60ms.
+
+Reducing
+[`:onyx/max-pending`](http://www.onyxplatform.org/docs/cheat-sheet/latest/#catalog-entry/:onyx/max-pending)
+*can* reduce the complete latency, however it will also reduce the number of
+segments that are currently outstanding, which can hurt throughput. Also note,
+that while it may reduce complete latencies, the messages may still be waiting
+on the topic/queue/etc that the plugin is reading from, and therefore the true processing latency may be masked.
+
+###### Retries
+
+Task types: input
+
+Tags: 
+* retry_segment_rate_1s
+
+Retry segment rate measures the number of times that segments emitted from an
+input task, have hit the time specified in
+[`:onyx/pending-timeout`](http://www.onyxplatform.org/docs/cheat-sheet/latest/#catalog-entry/:onyx/max-pending)
+(ms) without being completed.
+
+Segments that are retried often indicate that a message was lost, potentially
+because a node died. However, there is also the potential that a pipeline is
+overwhelmed and unable to process the segments within `:onyx/pending-timeout`.
+Generally, the correct response is to improve your pipeline's performance,
+and/or reduce [`:onyx/max-pending`](http://www.onyxplatform.org/docs/cheat-sheet/latest/#catalog-entry/:onyx/max-pending)
+in order to exhibit more backpressure on the pipeline.
+
+##### Throughput
+
+Task types: input, function, output
+
+Tags:
+* throughput_1s - total number of segments processed by the task, summed over 1s 
+* throughput_10s - total number of segments processed by the task, summed over 1s 
+* throughput_60s - total number of segments processed by the task, summed over 1s 
+
+The total number of segments being read and emitted by the task, summed over
+1s, or 10s, or 60s. In case of input tasks, this generally corresponds to
+however many segments were read from the input source over that time period. In
+the case of output tasks, this corresponds to the number of segments written.
+For function tasks, it corresponds to the number of segments that are processed
+by the task's `:onyx/fn`. Note that throughputs may be low because the task is
+slow, but can also result from tasks that are starved. Also note that input tasks may only process up to
+[`:onyx/max-pending`](http://www.onyxplatform.org/docs/cheat-sheet/latest/#catalog-entry/:onyx/max-pending)
+unacked segments at a given time, and thus a low input task throughput may be a
+result of backpressure resulting from max-pending and a slow pipeline.
+
+##### Pending Messages Count
+
+Task types: input
+
+Tags:
+* pending_messages_count - number of unacked segments that are currently being processed for this task for the job
+
+Number of segments that have been read by an input task, and have not yet been
+completely acked. This gives a good indication of whether the input medium is
+able to supply segments quickly enough to have segments up to
+`:onyx/max-pending`, or show that an input source is being drained quickly i.e.
+the pipeline is processing segments as soon as they arrive on the input source.
+
+##### Batch Latency
+
+Task types: input, function, output
+
+Tags:
+* batch_latency_50th - batch latency (ms) 50th percentile, calculated over 10s period
+* batch_latency_90th - batch latency (ms) 90th percentile, calculated over 10s period 
+* batch_latency_99th - batch latency (ms) 99th percentile, calculated over 10s period
+* batch_latency_99_9th - batch latency (ms) 99.9th percentile, calculated over 10s period
+* batch_latency_max - batch latency (ms) maximum, calculated over 10s period
+
+Batch latency measures the amount if time, in ms, that it takes a to map
+[`:onyx/fn`](http://www.onyxplatform.org/docs/cheat-sheet/latest/#catalog-entry/:onyx/fn)
+over a batch of segments. This is generally an indication of the performance of a task's `:onyx/fn`.
 
 #### Lifecycle entries
 
 Add these maps to your `:lifecycles` vector in the argument to `:onyx.api/submit-job`.
 
 ##### Riemann metrics
-
 
 Send all metrics to a Riemann instance on a single thread. Events are buffered in a core.async channel with capacity `:riemann/buffer-capacity`, default capacity is 10,000.
 
