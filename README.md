@@ -11,17 +11,17 @@ In your project file:
 ```
 #### Guide to Types of Metrics & Diagnosing Issues
 
-First, note that all metrics are reported per peer. Therefore, you must be sure
-to visualize each measurement independently, or to aggregate/roll up reported metrics
+Firstly, please note that all metrics are reported per peer. Please be sure
+to either visualize each measurement independently, or to aggregate/roll up reported metrics
 correctly e.g sum throughputs, average/max/min complete latencies, etc.
 
 #### Segment Completions
 
-Complete latency measures the amount of time, in ms, that it takes a segment
-emitted by an input task to be fully acked through all tasks in the job. Onyx's
+Complete latency measures the amount of time in ms that a segment,
+emitted by an input task, takes to be fully acked through all tasks in the job. Onyx's
 messaging model works by tracking all segments that result from operations on
-the input segment at each task. Complete latency gives a good indication of the
-end to end latency of segments in your job.
+the input segment at each task. Complete latency gives an excellent indication of the
+end to end processing time for segments through an entire job.
 
 Tags:
 * complete_latency_50th - complete latency (ms) 50th percentile, calculated over 10s period
@@ -38,8 +38,7 @@ this means a segment read by `:A`, was sent to `:B`, processed, and
 then sent to `:C`, and processed by the output `:C`, with all generated
 segments acked, within 60ms.
 
-Reducing
-[`:onyx/max-pending`](http://www.onyxplatform.org/docs/cheat-sheet/latest/#catalog-entry/:onyx/max-pending)
+Reducing [`:onyx/max-pending`](http://www.onyxplatform.org/docs/cheat-sheet/latest/#catalog-entry/:onyx/max-pending)
 *can* reduce the complete latency, however it will also reduce the number of
 segments that are currently outstanding, which can hurt throughput. Also note,
 that while it may reduce complete latencies, the messages may still be waiting
@@ -52,10 +51,10 @@ Task types: input
 Tags: 
 * retry_segment_rate_1s
 
-Retry segment rate measures the number of times that segments emitted from an
-input task, have hit the time specified in
+Retry segment rate measures total number of segments, emitted from an
+input task, that have taken longer than the time specified in
 [`:onyx/pending-timeout`](http://www.onyxplatform.org/docs/cheat-sheet/latest/#catalog-entry/:onyx/max-pending)
-(ms) without being completed.
+(ms) without being completed, and were re-emitted as a result.
 
 Segments that are retried often indicate that a message was lost, potentially
 because a node died. However, there is also the potential that a pipeline is
@@ -91,11 +90,11 @@ Task types: input
 Tags:
 * pending_messages_count - number of unacked segments that are currently being processed for this task for the job
 
-Number of segments that have been read by an input task, and have not yet been
+The number of segments that have been read by an input task, and have not yet been
 completely acked. This gives a good indication of whether the input medium is
 able to supply segments quickly enough to have segments up to
-`:onyx/max-pending`, or show that an input source is being drained quickly i.e.
-the pipeline is processing segments as soon as they arrive on the input source.
+`:onyx/max-pending`, or show that an input source is being drained quickly as it is filled 
+i.e. the pipeline is processing segments as soon as they arrive on the input source.
 
 #### Batch Latency
 
