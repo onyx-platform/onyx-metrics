@@ -173,7 +173,7 @@ than a job id, include the following in your job's metadata key:
 
 #### Websocket output
 
-Sends all metric data to a websocket. The Onyx dashboard already knows what to do with this output, but you can direct it anywhere.
+Sends all metric data to a websocket. Currently we do have a suggested web server implementation, as websocket inputs are no longer supported in onyx-dashboard.
 
 In your peer boot-up namespace:
 
