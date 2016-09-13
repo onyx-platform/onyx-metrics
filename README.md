@@ -1,6 +1,6 @@
 # onyx-metrics
 
-Onyx Lifecycle plugin for instrumenting workflows. Track throughput and metrics of your tasks and log the output to Timbre and/or dashboard via websockets.
+Onyx Lifecycle plugin for instrumenting workflows. Track throughput and metrics of your tasks and log the output to Timbre and/or a metrics server.
 
 #### Installation
 
