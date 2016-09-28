@@ -80,22 +80,12 @@
            :tags ["monitoring-config"]
            :metric bytes}))
 
-(defn zookeeper-write-job-scheduler [ch config {:keys [latency bytes]}]
-  (>!! ch {:service "zookeeper.write-job-scheduler.latency"
+(defn zookeeper-write-log-parameters [ch config {:keys [latency bytes]}]
+  (>!! ch {:service "zookeeper.write-log-parameters.latency"
            :state "ok"
            :tags ["monitoring-config"]
            :metric latency})
-  (>!! ch {:service "zookeeper.write-job-scheduler.bytes"
-           :state "ok"
-           :tags ["monitoring-config"]
-           :metric bytes}))
-
-(defn zookeeper-write-messaging [ch config {:keys [latency bytes]}]
-  (>!! ch {:service "zookeeper.write-messaging.latency"
-           :state "ok"
-           :tags ["monitoring-config"]
-           :metric latency})
-  (>!! ch {:service "zookeeper.write-messaging.bytes"
+  (>!! ch {:service "zookeeper.write-log-parameters.bytes"
            :state "ok"
            :tags ["monitoring-config"]
            :metric bytes}))
@@ -162,14 +152,8 @@
            :tags ["monitoring-config"]
            :metric latency}))
 
-(defn zookeeper-read-job-scheduler [ch config {:keys [latency]}]
-  (>!! ch {:service "zookeeper.read-job-scheduler.latency"
-           :state "ok"
-           :tags ["monitoring-config"]
-           :metric latency}))
-
-(defn zookeeper-read-messaging [ch config {:keys [latency]}]
-  (>!! ch {:service "zookeeper.read-messaging.latency"
+(defn zookeeper-read-log-parameters [ch config {:keys [latency]}]
+  (>!! ch {:service "zookeeper.read-log-parameters.latency"
            :state "ok"
            :tags ["monitoring-config"]
            :metric latency}))
@@ -320,8 +304,7 @@
      :zookeeper-write-lifecycles (partial zookeeper-write-lifecycles ch)
      :zookeeper-write-task (partial zookeeper-write-task ch)
      :zookeeper-write-chunk (partial zookeeper-write-chunk ch)
-     :zookeeper-write-job-scheduler (partial zookeeper-write-job-scheduler ch)
-     :zookeeper-write-messaging (partial zookeeper-write-messaging ch)
+     :zookeeper-write-log-parameters (partial zookeeper-write-log-parameters ch)
      :zookeeper-force-write-chunk (partial zookeeper-force-write-chunk ch)
      :zookeeper-write-origin (partial zookeeper-write-origin ch)
      :zookeeper-read-catalog (partial zookeeper-read-catalog ch)
@@ -331,8 +314,7 @@
      :zookeeper-read-task (partial zookeeper-read-task ch)
      :zookeeper-read-chunk (partial zookeeper-read-chunk ch)
      :zookeeper-read-origin (partial zookeeper-read-origin ch)
-     :zookeeper-read-job-scheduler (partial zookeeper-read-job-scheduler ch)
-     :zookeeper-read-messaging (partial zookeeper-read-messaging ch)
+     :zookeeper-read-log-parameters (partial zookeeper-read-log-parameters ch)
      :zookeeper-gc-log-entry (partial zookeeper-gc-log-entry ch)
      :peer-gc-peer-link (partial peer-gc-peer-link ch)
      :peer-backpressure-on (partial peer-backpressure-on ch)
