@@ -38,19 +38,18 @@
           defaulted-port (if port
                            (Integer/parseInt (str port))
                            5555)
-          client (r/tcp-client {:host address :port defaulted-port})
-          timeout-count (atom 0)]
-        
-      (while (not (Thread/interrupted)) 
-        (let [events (map metric->riemann-event (read-batch ch batch-size batch-timeout))]
-          (when-not (empty? events) 
-            (loop [sleep 0]
-              ;; Exponential backoff to rate limit errors
-              (when-not (zero? sleep) 
-                (info (format "Message send timeout count %s. Backing off %s." @timeout-count sleep))
-                (Thread/sleep sleep))
-
-              (let [result (try
+          timeout-count (atom 0)
+          client (r/tcp-client {:host address :port defaulted-port})]
+      (try 
+       (while (not (Thread/interrupted)) 
+         (let [events (map metric->riemann-event (read-batch ch batch-size batch-timeout))]
+           (when-not (empty? events) 
+             (loop [sleep 0]
+               ;; Exponential backoff to rate limit errors
+               (when-not (zero? sleep) 
+                 (info (format "Message send timeout count %s. Backing off %s." @timeout-count sleep))
+                 (Thread/sleep sleep))
+               (let [result (try
                              (-> client 
                                  (r/send-events events)
                                  (deref defaulted-timeout ::timeout))
@@ -60,6 +59,8 @@
                              (catch Throwable e
                                (warn e "Lost riemann connection" address port)
                                ::exception))]
-                (when (#{::exception ::timeout} result)
-                  (swap! timeout-count inc)
-                  (recur (next-sleep-time sleep)))))))))))
+                 (when (#{::exception ::timeout} result)
+                   (swap! timeout-count inc)
+                   (recur (next-sleep-time sleep))))))))
+       (finally 
+        (r/close! client))))))
