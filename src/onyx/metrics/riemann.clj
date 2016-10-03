@@ -3,8 +3,7 @@
             [riemann.client :as r]
             [taoensso.timbre :refer [info warn fatal]]
             [clojure.set :refer [rename-keys]]
-            [interval-metrics.core :as im]
-            [clojure.tools.logging :as log]))
+            [interval-metrics.core :as im]))
 
 (defn metric->riemann-event [metric]
   (-> metric 
@@ -66,5 +65,5 @@
                     (swap! timeout-count inc)
                     (recur (next-sleep-time sleep))))))))
         (finally
-          (log/info "Closing riemann connection.")
+          (info "Closing riemann connection.")
           (r/close! client))))))
