@@ -47,11 +47,12 @@
               :job-name job-name
               :task-id (:onyx.core/task-id event)
               :task-name (:onyx.core/task event)
-              :peer-id peer-id}]
-
+              :peer-id peer-id}
+        shutdown? (atom false)]
     {:onyx.metrics.metrics/metrics metrics
      :onyx.metrics.metrics/send-ch ch
-     :onyx.metrics.metrics/sender-thread ((kw->fn (:metrics/sender-fn lifecycle)) lifecycle ch)
+     :onyx.metrics.metrics/sender-thread ((kw->fn (:metrics/sender-fn lifecycle)) lifecycle ch shutdown?)
+     :onyx.metrics.metrics/shutdown? shutdown?
      :onyx.metrics.metrics/metrics-fut
      (future
        (try
@@ -211,7 +212,8 @@
              (recur (mod (inc cycle-count) latency-period-secs)
                     (max 0 (- 1000 (- (System/currentTimeMillis) time-start))))))
          (catch InterruptedException e
-           (throw e))
+           (.interrupt (Thread/currentThread))
+           (throw (RuntimeException. e)))
          (catch Throwable e
            (fatal e))))}))
 
@@ -249,6 +251,7 @@
 
 (defn after-task [event lifecycle]
   (future-cancel (:onyx.metrics.metrics/metrics-fut event))
+  (reset! (:onyx.metrics.metrics/shutdown? event) true)
   (future-cancel (:onyx.metrics.metrics/sender-thread event))
   {})
 

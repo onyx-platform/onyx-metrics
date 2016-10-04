@@ -110,7 +110,8 @@
               host-id (str (java.util.UUID/randomUUID))
               monitoring-config (monitoring/monitoring-config 10000)
               monitoring-thread (riemann/riemann-sender {:riemann/address "localhost" :riemann/port 12201} 
-                                                        (:monitoring/ch monitoring-config))]
+                                                        (:monitoring/ch monitoring-config)
+                                                        (atom false))]
           (with-test-env [test-env [3 env-config peer-config monitoring-config]]
             (let [batch-size 20
                   catalog [{:onyx/name :in

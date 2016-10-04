@@ -27,7 +27,7 @@
           events)
         events))))
 
-(defn riemann-sender [{:keys [riemann/address riemann/port riemann/batch-size riemann/batch-timeout riemann/send-timeout] :as riemann-config} ch]
+(defn riemann-sender [{:keys [riemann/address riemann/port riemann/batch-size riemann/batch-timeout riemann/send-timeout] :as riemann-config} ch shutdown?]
   (when (nil? address)
     (throw (ex-info "Invalid Riemann metrics configuration." riemann-config)))
 
@@ -42,7 +42,7 @@
           timeout-count (atom 0)]
         
       (try
-        (while (not (Thread/interrupted))
+        (while (not @shutdown?)
           (let [events (map metric->riemann-event (read-batch ch batch-size batch-timeout))]
             (when-not (empty? events) 
               (loop [sleep 0]
@@ -56,7 +56,8 @@
                                    (r/send-events events)
                                    (deref defaulted-timeout ::timeout))
                                (catch InterruptedException e
-                                 (throw e))
+                                 (.interrupt (Thread/currentThread))
+                                 (throw (RuntimeException. e)))
                                (catch Throwable e
                                  (warn e "Lost riemann connection" address port)
                                  ::exception))]
