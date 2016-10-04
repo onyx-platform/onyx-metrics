@@ -73,8 +73,7 @@
                                                      :content-type :json}))
                                      events-by-period))
                              (catch InterruptedException e
-                               ;; Intentionally pass.
-                               )
+                              (throw e))
                              (catch Throwable e
                                (run! #(>!! ch %) events)
                                (warn-failure e events)

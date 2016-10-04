@@ -74,8 +74,7 @@
                                     global-sample-rate (assoc :sample-rate global-sample-rate)))))
 
             (catch InterruptedException e
-              ;; Intentionally pass.
-              )
+              (throw e))
 
             (catch java.lang.AssertionError e
               (error e))

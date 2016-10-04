@@ -210,7 +210,8 @@
                                         :tags ["batch_latency_max" "onyx" task-name job-name peer-id-str]})))
              (recur (mod (inc cycle-count) latency-period-secs)
                     (max 0 (- 1000 (- (System/currentTimeMillis) time-start))))))
-         (catch InterruptedException e)
+         (catch InterruptedException e
+           (throw e))
          (catch Throwable e
            (fatal e))))}))
 

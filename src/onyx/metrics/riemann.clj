@@ -56,8 +56,7 @@
                                    (r/send-events events)
                                    (deref defaulted-timeout ::timeout))
                                (catch InterruptedException e
-                                 ;; Intentionally pass.
-                                 )
+                                 (throw e))
                                (catch Throwable e
                                  (warn e "Lost riemann connection" address port)
                                  ::exception))]

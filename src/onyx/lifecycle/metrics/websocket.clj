@@ -11,6 +11,5 @@
           (try
             (ws/send-msg conn (pr-str metric-msg))
             (catch InterruptedException e
-              ;; Intentionally pass.
-              )))
+              (throw e))))
         (recur)))))

@@ -11,6 +11,5 @@
         (try
           (info "Metrics:" metric-msg)
           (catch InterruptedException e
-            ;; Intentionally pass.
-            )))
+            (throw e))))
       (recur))))
