@@ -51,7 +51,8 @@
                                 dogstatsd/global-tags
                                 dogstatsd/global-sample-rate]
                          :as   lifecycle}
-                        ch]
+                        ch
+                        shutdown?]
   (when global-tags
     (assert (vector? global-tags)
             "Please use the vector format for tags [String ...]"))
@@ -64,22 +65,22 @@
   (let [_ (dogstatsd/configure! url {:tags global-tags})]
     (future
       (loop []
-        (when-let [metric-msg (<!! ch)]
-          (try
-            (let [{:keys [service value opts]} (metric->dogstatsd-metric metric-msg)]
-              (when value
-                (dogstatsd/gauge! service
-                                  value
-                                  (cond-> opts
-                                    global-sample-rate (assoc :sample-rate global-sample-rate)))))
+        (when-not @shutdown?
+          (when-let [metric-msg (<!! ch)]
+            (try
+             (let [{:keys [service value opts]} (metric->dogstatsd-metric metric-msg)]
+               (when value
+                 (dogstatsd/gauge! service
+                                   value
+                                   (cond-> opts
+                                     global-sample-rate (assoc :sample-rate global-sample-rate)))))
 
-            (catch InterruptedException e
-              ;; Intentionally pass.
-              )
+             (catch InterruptedException e
+               (throw e))
 
-            (catch java.lang.AssertionError e
-              (error e))
+             (catch java.lang.AssertionError e
+               (error e))
 
-            (catch Throwable e
-              (warn e "Lost dogstatsd connection: " url))))
-        (recur)))))
+             (catch Throwable e
+               (warn e "Lost dogstatsd connection: " url))))
+          (recur))))))

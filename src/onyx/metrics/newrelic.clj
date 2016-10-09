@@ -44,7 +44,7 @@
 (defn warn-failure [e events]
   (warn e "Failed to send events to newrelic" events))
 
-(defn newrelic-sender [{:keys [newrelic/batch-size newrelic/batch-timeout newrelic/license-key]} ch]
+(defn newrelic-sender [{:keys [newrelic/batch-size newrelic/batch-timeout newrelic/license-key]} ch shutdown?]
   (let [batch-size (or batch-size 50)
         batch-timeout (or batch-timeout 500)
         timeout-count (atom 0)
@@ -52,7 +52,8 @@
                         license-key
                         (throw (Exception. "NewRelic license key must be supplied via the NEW_RELIC_LICENSE_KEY environment variable or :newrelic/license-key")))] 
     (future
-      (while (not (Thread/interrupted)) 
+      (while (and (not (Thread/interrupted))
+                  (not @shutdown?)) 
         (let [events (read-batch ch batch-size batch-timeout)
               events-by-period (group-by (juxt :job-name :period) events)]
           (when-not (empty? events) 
@@ -63,22 +64,21 @@
                 (Thread/sleep sleep))
 
               (let [result (try
-                             (doall 
-                               (pmap (fn [[[job-name period] evs]]
-                                       (client/post "https://platform-api.newrelic.com/platform/v1/metrics" 
-                                                    {:headers {"X-License-Key" license-key}
-                                                     :form-params {"agent" {"host" (str (.getHostName (InetAddress/getLocalHost))) 
-                                                                            "version" "1.0.0"}
-                                                                   "components" [(metrics->components job-name period evs)]}
-                                                     :content-type :json}))
-                                     events-by-period))
-                             (catch InterruptedException e
-                               ;; Intentionally pass.
-                               )
-                             (catch Throwable e
-                               (run! #(>!! ch %) events)
-                               (warn-failure e events)
-                               ::exception))]
+                            (doall 
+                             (pmap (fn [[[job-name period] evs]]
+                                     (client/post "https://platform-api.newrelic.com/platform/v1/metrics" 
+                                                  {:headers {"X-License-Key" license-key}
+                                                   :form-params {"agent" {"host" (str (.getHostName (InetAddress/getLocalHost))) 
+                                                                          "version" "1.0.0"}
+                                                                 "components" [(metrics->components job-name period evs)]}
+                                                   :content-type :json}))
+                                   events-by-period))
+                            (catch InterruptedException e
+                              (throw e))
+                            (catch Throwable e
+                              (run! #(>!! ch %) events)
+                              (warn-failure e events)
+                              ::exception))]
                 (when (#{::exception} result)
                   (swap! timeout-count inc)
                   (recur (next-sleep-time sleep)))))))))))

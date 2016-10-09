@@ -4,13 +4,13 @@
             [clojure.set :refer [rename-keys]]
             [interval-metrics.core :as im]))
 
-(defn timbre-sender [lifecycle ch]
+(defn timbre-sender [lifecycle ch shutdown?]
   (future
     (loop []
-      (when-let [metric-msg (<!! ch)]
-        (try
-          (info "Metrics:" metric-msg)
-          (catch InterruptedException e
-            ;; Intentionally pass.
-            )))
-      (recur))))
+      (when-not @shutdown?
+        (when-let [metric-msg (<!! ch)]
+          (try
+           (info "Metrics:" metric-msg)
+           (catch InterruptedException e
+             (throw e))))
+        (recur)))))
