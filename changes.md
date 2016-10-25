@@ -1,3 +1,6 @@
+# 0.9.11.1
+- Fix tracking of pending-size which could become negative under some retry conditions.
+
 # 0.9.0
 - Added NewRelic metrics sender contributed by LockedOn (http://www.lockedon.com).
 - Deprecated `:metrics/workflow-name`. Use job metadata via your job submission like so:

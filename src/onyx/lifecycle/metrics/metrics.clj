@@ -246,9 +246,10 @@
 
 (defn on-retry [event message-id rets lifecycle]
   (let [{:keys [retry-rate completion-tracking pending-size]} (:onyx.metrics.metrics/metrics event)]
-    (im/update! retry-rate 1)
-    (swap! completion-tracking dissoc message-id)
-    (swap! pending-size dec)))
+    (when (get @completion-tracking message-id)
+      (im/update! retry-rate 1)
+      (swap! completion-tracking dissoc message-id)
+      (swap! pending-size dec))))
 
 (defn after-task [event lifecycle]
   (future-cancel (:onyx.metrics.metrics/metrics-fut event))
