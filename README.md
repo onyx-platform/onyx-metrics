@@ -7,7 +7,7 @@ Onyx Lifecycle plugin for instrumenting workflows. Track throughput and metrics 
 In your project file:
 
 ```clojure
-[org.onyxplatform/onyx-metrics "0.9.14.1-SNAPSHOT"]
+[org.onyxplatform/onyx-metrics "0.9.15.0"]
 ```
 
 #### Guide to Types of Metrics & Diagnosing Issues
