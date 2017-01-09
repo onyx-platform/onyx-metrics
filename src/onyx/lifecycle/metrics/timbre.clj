@@ -2,7 +2,7 @@
   (:require [clojure.core.async :refer [chan >!! <!! dropping-buffer]]
             [taoensso.timbre :refer [info warn fatal]]
             [clojure.set :refer [rename-keys]]
-            [interval-metrics.core :as im]))
+            #_[interval-metrics.core :as im]))
 
 (defn timbre-sender [lifecycle ch]
   (future

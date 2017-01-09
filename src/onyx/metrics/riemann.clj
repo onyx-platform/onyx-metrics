@@ -3,7 +3,7 @@
             [riemann.client :as r]
             [taoensso.timbre :refer [info warn fatal]]
             [clojure.set :refer [rename-keys]]
-            [interval-metrics.core :as im]))
+            #_[interval-metrics.core :as im]))
 
 (defn metric->riemann-event [metric]
   (-> metric 

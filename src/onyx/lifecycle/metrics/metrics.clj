@@ -2,43 +2,71 @@
   (:require [taoensso.timbre :refer [info warn fatal]]
             [metrics.core :refer [new-registry]]
             [clojure.set :refer [rename-keys]]
-            [onyx.peer.operation :refer [kw->fn]]
+            [onyx.static.util :refer [kw->fn]]
+            [onyx.protocol.task-state :as task]
+            [metrics.counters :as c]
             [metrics.timers :as t]
+            [metrics.gauges :as g]
             [metrics.meters :as m])
   (:import [java.util.concurrent TimeUnit]))
 
-(defn update-timer! [^com.codahale.metrics.Timer timer ms]
-  (.update timer ms TimeUnit/MILLISECONDS))
+(defn new-lifecycle-latency [reg job-name task-name lifecycle]
+  (let [timer ^com.codahale.metrics.Timer (t/timer reg ["job" job-name task-name (name lifecycle)])] 
+    (fn [state latency-ns]
+      (.update timer latency-ns TimeUnit/NANOSECONDS))))
 
-(defn before-task [event lifecycle]
+(defn new-read-batch [reg job-name task-name lifecycle]
+  (let [throughput (m/meter reg [job-name task-name (name lifecycle) "throughput"])
+        timer ^com.codahale.metrics.Timer (t/timer reg ["job" job-name task-name (name lifecycle)])] 
+    (fn [state latency-ns]
+      (m/mark! throughput (count (:onyx.core/batch (task/get-event state))))
+      (.update timer latency-ns TimeUnit/NANOSECONDS))))
+
+(defn new-write-batch [reg job-name task-name lifecycle]
+  (let [throughput (m/meter reg [job-name task-name (name lifecycle) "throughput"])
+        timer ^com.codahale.metrics.Timer (t/timer reg ["job" job-name task-name (name lifecycle)])] 
+    (fn [state latency-ns]
+      ;; TODO, for blockable lifecycles, keep adding latencies until advance?
+      (.update timer latency-ns TimeUnit/NANOSECONDS)
+      (when (task/advanced? state)
+        (m/mark! throughput (count (mapcat :leaves (:tree (:onyx.core/results (task/get-event state))))))))))
+
+(defn update-rv-epoch [cnt-replica-version cnt-epoch epoch-rate]
+  (fn [state latency-ns]
+    (m/mark! epoch-rate 1)
+    (c/inc! cnt-replica-version (- (task/replica-version state) 
+                                   (c/value cnt-replica-version)))
+    (c/inc! cnt-epoch (- (task/epoch state) (c/value cnt-epoch)))))
+
+;; FIXME, close counters and remove them from the registry
+(defn before-task [{:keys [onyx.core/job-id onyx.core/id onyx.core/monitoring
+                           onyx.core/task] :as event} 
+                   {:keys [metrics/lifecycles] :as lifecycle}] 
   (when (:metrics/workflow-name lifecycle)
     (throw (ex-info ":metrics/workflow-name has been deprecated. Use job metadata such as:
-                    {:workflow ...
-                    :lifecycles ...
-                    :metadata {:name \"YOURJOBNAME\"}}
-                    to supply your job's name" {})))
-  (let [job-id (:onyx.core/job-id event)
-        job-name (str (get-in event [:onyx.core/task-information :metadata :name] job-id))
+                     {:workflow ...
+                      :lifecycles ...
+                      :metadata {:name \"YOURJOBNAME\"}}
+                      to supply your job's name" {})))
+  (let [job-name (str (get-in event [:onyx.core/task-information :metadata :name] job-id))
         task-name (name (:onyx.core/task event))
-        peer-id (:onyx.core/id event)
-        peer-id-str (str peer-id)
-        monitoring (:onyx.core/monitoring event)
         reg (:registry monitoring)
-        batch-latency (t/timer reg [job-name task-name "batch-latency"])
-        throughput (m/meter reg [job-name task-name "throughput"])
-        retry-latency (t/timer reg [job-name task-name "retry-segment"]) 
-        ack-latency (t/timer reg [job-name task-name "ack-segment"])]
-    {:onyx.core/monitoring (merge monitoring
-                                  {:peer-batch-latency (fn [config metric]
-                                                         (update-timer! batch-latency (:latency metric)))
-                                   :peer-retry-segment (fn [config metric]
-                                                         (update-timer! retry-latency (:latency metric)))
-                                   :peer-ack-segment (fn [config metric]
-                                                       (update-timer! ack-latency (:latency metric)))
-                                   :peer-ack-segments (fn [config metric]
-                                                        (update-timer! ack-latency (:latency metric)))
-                                   :peer-processed-segments (fn [config metric]
-                                                              (m/mark! throughput (:count metric)))})}))
+        _ (when-not reg (throw (Exception. "Monitoring component is not setup")))
+        cnt-replica-version (c/counter reg ["job" job-name task-name (str id) "replica-version"])
+        cnt-epoch (c/counter reg ["job" job-name task-name (str id) "epoch"])
+        epoch-rate (m/meter reg ["job" job-name task-name (str id) "epoch-rate"])
+        update-rv-epoch-fn (update-rv-epoch cnt-replica-version cnt-epoch epoch-rate)]
+    {:onyx.core/monitoring (reduce 
+                            (fn [mon lifecycle-name]
+                              (assoc mon 
+                                     lifecycle-name 
+                                     (case lifecycle-name
+                                       :lifecycle/unblock-subscribers update-rv-epoch-fn
+                                       :lifecycle/read-batch (new-read-batch reg job-name task-name :lifecycle/read-batch) 
+                                       :lifecycle/write-batch (new-write-batch reg job-name task-name :lifecycle/write-batch) 
+                                       (new-lifecycle-latency reg job-name task-name lifecycle-name))))
+                            monitoring
+                            lifecycles)}))
 
 (def calls
   {:lifecycle/before-task-start before-task})

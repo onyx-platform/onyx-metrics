@@ -8,14 +8,24 @@ rules:
   name: onyx_zookeeper_$1_$2_$3
 - pattern: metrics<name=peer[.]([^.]+)[.]([^.]+)><>([^:]+)
   name: onyx_peer_event
+  attrNameSnakeCase: false
   labels:
     event-type: "$1"
 - pattern: metrics<name=group[.]([^.]+)[.]([^.]+)><>([^:]+)
   name: onyx_group_event
+  attrNameSnakeCase: false
   labels:
     event-type: "$1"
 - pattern: metrics<name=([^.]+)[.]([^.]+)[.]([^.]+)><>([^:]+)
   name: onyx_jobs_$3_$4
+  attrNameSnakeCase: false
   labels:
     job: "$1"
     task: "$2"
+- pattern: metrics<name=([^.]+)[.]([^.]+)[.]([^.]+)[.]([^.]+)><>([^:]+)
+  name: onyx_jobs_$3_$4_$5
+  attrNameSnakeCase: false
+  labels:
+    job: "$1"
+    task: "$2"
+    peer: "$3"
