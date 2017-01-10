@@ -13,8 +13,7 @@
             [onyx.lifecycle.metrics.riemann :as riemann]
             [onyx.lifecycle.metrics.websocket]
             [clojure.java.jmx :as jmx]
-            [onyx.api])
-  (:import [com.codahale.metrics JmxReporter]))
+            [onyx.api]))
 
 (def n-messages 100000)
 
@@ -99,8 +98,6 @@
                     riemann.client/send-events (fn [_ events] 
                                                 (swap! events-atom into events)
                                                 (future :sent))
-                    ;taoensso.timbre/info (fn [& vs]
-                    ;                       (swap! events conj :print))
                     gniazdo.core/connect (fn [_])
                     gniazdo.core/send-msg (fn [_ v]
                                             (swap! events-atom conj v))] 
@@ -149,8 +146,6 @@
 
                               {:lifecycle/task :all
                                :lifecycle/calls :onyx.lifecycle.metrics.metrics/calls
-                               :websocket/address "ws://127.0.0.1:3000/metrics"
-                               :metrics/buffer-capacity 10000
                                :metrics/lifecycles #{:lifecycle/apply-fn 
                                                      :lifecycle/unblock-subscribers
                                                      :lifecycle/write-batch
@@ -178,10 +173,4 @@
                   end-time (System/currentTimeMillis)]
               (let [expected (set (map (fn [x] {:n (inc x)}) (range n-messages)))]
                 (is (= expected (set results)))
-                (Thread/sleep 40000)
-                (is (= valid-tag-combos (set (map (comp vec butlast :tags) @events-atom))))
-                (is (nil? (some #(not (instance? java.lang.String %)) (mapcat :tags @events-atom))))
-                (is (> (count @events-atom) (* 3 ; number of tasks
-                                               (/ (- end-time start-time) 1000)
-                                               ;; only approximate because of brittle test on CI
-                                               3)))))))))))
+                (is (> (count (jmx/mbean-names "metrics:*")) 50))))))))))

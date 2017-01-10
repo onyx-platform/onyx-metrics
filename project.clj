@@ -1,4 +1,4 @@
-(defproject org.onyxplatform/onyx-metrics "0.10.0.0-technical-preview-3"
+(defproject org.onyxplatform/onyx-metrics "0.10.0.0-SNAPSHOT"
   :description "Instrument Onyx workflows"
   :url "https://github.com/onyx-platform/onyx-metrics"
   :license {:name "Eclipse Public License"
@@ -14,9 +14,7 @@
   :dependencies [[org.onyxplatform/onyx "0.10.0-technical-preview-3"]
                  ^{:voom {:repo "git@github.com:onyx-platform/onyx.git" :branch "master"}}
                  [org.clojure/clojure "1.8.0"]
-                 [org.clojure/java.jmx "0.3.3"]
                  [metrics-clojure "2.8.0"]]
-  :java-agents [[io.prometheus.jmx/jmx_prometheus_javaagent "0.7" :options "1234:prometheus/config.yml"]]
   :java-opts ^:replace ["-server" "-Xmx3g"]
   :global-vars  {*warn-on-reflection* true
                  *assert* false
@@ -30,6 +28,7 @@
                               "-XX:StartFlightRecording=duration=1080s,filename=recording.jfr"]
                    :dependencies [[riemann-clojure-client "0.4.1"]
                                   [stylefruits/gniazdo "0.4.0"]
+                                  [org.clojure/java.jmx "0.3.3"]
                                   [clj-http "2.1.0"]
                                   [cheshire "5.5.0"]
                                   [cognician/dogstatsd-clj "0.1.1"]]
