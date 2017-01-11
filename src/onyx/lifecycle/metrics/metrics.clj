@@ -66,7 +66,6 @@
         cnt-epoch (c/counter reg ["job" job-name "task" task-name "peer-id" (str id) "epoch"])
         epoch-rate (m/meter reg ["job" job-name "task" task-name "peer-id" (str id) "epoch-rate"])
         update-rv-epoch-fn (update-rv-epoch cnt-replica-version cnt-epoch epoch-rate)]
-    (println "LIFECYCLES" lifecycles)
     {:onyx.core/monitoring (reduce 
                             (fn [mon lifecycle]
                               (assoc mon 
