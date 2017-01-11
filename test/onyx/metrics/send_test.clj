@@ -103,17 +103,18 @@
                           :zookeeper/server? true
                           :zookeeper.server/port 2188
                           :onyx/tenancy-id id}
+              monitoring-config (monitoring/monitoring-config)
+              reporter (.build (JmxReporter/forRegistry (:registry monitoring-config)))
+              _ (.start ^JmxReporter reporter)
               peer-config {:zookeeper/address "127.0.0.1:2188"
                            :onyx/tenancy-id id
                            :onyx.peer/job-scheduler :onyx.job-scheduler/greedy
+                           :monitoring-config monitoring-config
                            :onyx.messaging/impl :aeron
                            :onyx.messaging/allow-short-circuit? false
                            :onyx.messaging/peer-port 40200
                            :onyx.messaging/bind-addr "localhost"}
-              host-id (str (java.util.UUID/randomUUID))
-              monitoring-config (monitoring/monitoring-config)
-              reporter (.build (JmxReporter/forRegistry (:registry monitoring-config)))
-              _ (.start ^JmxReporter reporter)]
+              host-id (str (java.util.UUID/randomUUID))]
           (with-test-env [test-env [3 env-config peer-config monitoring-config]]
             (let [batch-size 20
                   catalog [{:onyx/name :in
@@ -167,8 +168,7 @@
                                           :metadata {:name "test-workflow"}
                                           :workflow workflow
                                           :lifecycles lifecycles
-                                          :task-scheduler :onyx.task-scheduler/balanced}
-                                         monitoring-config)
+                                          :task-scheduler :onyx.task-scheduler/balanced})
                   results (take-segments! out-chan)
                   _ (onyx.api/await-job-completion peer-config (:job-id job))
                   end-time (System/currentTimeMillis)]

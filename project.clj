@@ -1,4 +1,4 @@
-(defproject org.onyxplatform/onyx-metrics "0.9.6.1-SNAPSHOT"
+(defproject org.onyxplatform/onyx-metrics "0.9.16.0-SNAPSHOT"
   :description "Instrument Onyx workflows"
   :url "https://github.com/onyx-platform/onyx-metrics"
   :license {:name "Eclipse Public License"
@@ -11,11 +11,11 @@
                              :username :env
                              :password :env
                              :sign-releases false}}
-  :dependencies [[org.onyxplatform/onyx "0.9.7-alpha1"]
+  :dependencies [[org.onyxplatform/onyx "0.9.15"]
                  ^{:voom {:repo "git@github.com:onyx-platform/onyx.git" :branch "master"}}
                  [org.clojure/clojure "1.8.0"]
                  [interval-metrics "1.0.0"]]
-  :java-agents [[io.prometheus.jmx/jmx_prometheus_javaagent "0.6" :options "1234:config.yml"]]
+  ;:java-agents [[io.prometheus.jmx/jmx_prometheus_javaagent "0.6" :options "1234:config.yml"]]
   :java-opts ^:replace ["-server" "-Xmx3g"]
   :global-vars  {*warn-on-reflection* true
                  *assert* false

@@ -2,7 +2,7 @@
   (:require [taoensso.timbre :refer [info warn fatal]]
             [metrics.core :refer [new-registry]]
             [clojure.set :refer [rename-keys]]
-            [onyx.peer.operation :refer [kw->fn]]
+            [onyx.static.util :refer [kw->fn]]
             [metrics.timers :as t]
             [metrics.meters :as m])
   (:import [java.util.concurrent TimeUnit]))
