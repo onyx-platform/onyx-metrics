@@ -18,7 +18,7 @@
 
 (defn my-inc [{:keys [n] :as segment}]
   ;(println "INC")
-  ;(Thread/sleep 5000)
+  ;(Thread/sleep 1)
   (assoc segment :n (inc n)))
 
 (def valid-tag-combos
