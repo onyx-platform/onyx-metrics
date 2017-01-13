@@ -17,6 +17,8 @@
 (def n-messages 100000)
 
 (defn my-inc [{:keys [n] :as segment}]
+  ;(println "INC")
+  ;(Thread/sleep 5000)
   (assoc segment :n (inc n)))
 
 (def valid-tag-combos
@@ -122,6 +124,7 @@
                             :onyx/type :input
                             :onyx/medium :core.async
                             :onyx/batch-size batch-size
+                            :onyx/pending-timeout 5000
                             :onyx/max-pending 1000
                             :onyx/max-peers 1
                             :onyx/doc "Reads segments from a core.async channel"}

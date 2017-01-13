@@ -27,12 +27,15 @@
         batch-latency (t/timer reg [job-name task-name "batch-latency"])
         throughput (m/meter reg [job-name task-name "throughput"])
         retry-latency (t/timer reg [job-name task-name "retry-segment"]) 
+        complete-latency (t/timer reg [job-name task-name "complete-segment"])
         ack-latency (t/timer reg [job-name task-name "ack-segment"])]
     {:onyx.core/monitoring (merge monitoring
                                   {:peer-batch-latency (fn [config metric]
                                                          (update-timer! batch-latency (:latency metric)))
                                    :peer-retry-segment (fn [config metric]
                                                          (update-timer! retry-latency (:latency metric)))
+                                   :peer-complete-segment (fn [config metric]
+                                                            (update-timer! complete-latency (:latency metric)))
                                    :peer-ack-segment (fn [config metric]
                                                        (update-timer! ack-latency (:latency metric)))
                                    :peer-ack-segments (fn [config metric]
