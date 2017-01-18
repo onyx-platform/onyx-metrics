@@ -36,7 +36,10 @@
       ;; TODO, for blockable lifecycles, keep adding latencies until advance?
       (.update timer latency-ns TimeUnit/NANOSECONDS)
       (when (task/advanced? state)
-        (m/mark! throughput (count (mapcat :leaves (:tree (:onyx.core/results (task/get-event state))))))))))
+        (m/mark! throughput (reduce (fn [c {:keys [leaves]}]
+                                      (+ c (count leaves)))
+                                    0
+                                    (:tree (:onyx.core/results (task/get-event state)))))))))
 
 (defn update-rv-epoch [cnt-replica-version cnt-epoch epoch-rate]
   (fn [state latency-ns]
