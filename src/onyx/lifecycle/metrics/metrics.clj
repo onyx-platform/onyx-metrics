@@ -10,29 +10,22 @@
             [metrics.meters :as m])
   (:import [java.util.concurrent TimeUnit]))
 
-(defn new-lifecycle-latency [reg job-name task-name id lifecycle]
-  (let [timer ^com.codahale.metrics.Timer (t/timer reg ["job" job-name "task" task-name "peer-id" 
-                                                        (str id) "task-lifecycle" 
-                                                        (name lifecycle)])] 
+(defn new-lifecycle-latency [reg tag lifecycle]
+  (let [timer ^com.codahale.metrics.Timer (t/timer reg (into tag ["task-lifecycle" (name lifecycle)]))] 
     (fn [state latency-ns]
       (.update timer latency-ns TimeUnit/NANOSECONDS))))
 
-(defn new-read-batch [reg job-name task-name id lifecycle]
-  (let [throughput (m/meter reg ["job" job-name "task" task-name "peer-id" 
-                                 (str id) "task-lifecycle" (name lifecycle) "throughput"])
-        timer ^com.codahale.metrics.Timer (t/timer reg ["job" job-name "task" task-name "peer-id" 
-                                                        (str id) "task-lifecycle" 
-                                                        (name lifecycle)])] 
+(defn new-read-batch [reg tag lifecycle]
+  (let [throughput (m/meter reg (into tag ["task-lifecycle" (name lifecycle) "throughput"]))
+        timer ^com.codahale.metrics.Timer (t/timer reg (into tag ["task-lifecycle" (name lifecycle)]))] 
     (fn [state latency-ns]
       (m/mark! throughput (count (:onyx.core/batch (task/get-event state))))
       (.update timer latency-ns TimeUnit/NANOSECONDS))))
 
-(defn new-write-batch [reg job-name task-name id lifecycle]
-  (let [throughput (m/meter reg ["job" job-name "task" task-name "peer-id" 
-                                 (str id) "task-lifecycle" (name lifecycle) "throughput"])
+(defn new-write-batch [reg tag lifecycle]
+  (let [throughput (m/meter reg (into tag ["task-lifecycle" (name lifecycle) "throughput"]))
         timer ^com.codahale.metrics.Timer 
-        (t/timer reg ["job" job-name "task" task-name "peer-id" 
-                      (str id) "task-lifecycle" (name lifecycle)])] 
+        (t/timer reg (into tag ["task-lifecycle" (name lifecycle)]))] 
     (fn [state latency-ns]
       ;; TODO, for blockable lifecycles, keep adding latencies until advance?
       (.update timer latency-ns TimeUnit/NANOSECONDS)
@@ -66,9 +59,10 @@
         task-name (name (:onyx.core/task event))
         reg (:registry monitoring)
         _ (when-not reg (throw (Exception. "Monitoring component is not setup")))
-        cnt-replica-version (c/counter reg ["job" job-name "task" task-name "peer-id" (str id) "replica-version"])
-        cnt-epoch (c/counter reg ["job" job-name "task" task-name "peer-id" (str id) "epoch"])
-        epoch-rate (m/meter reg ["job" job-name "task" task-name "peer-id" (str id) "epoch-rate"])
+        tag ["job" job-name "task" task-name "peer-id" (str id)]
+        cnt-replica-version (c/counter reg (conj tag "replica-version"))
+        cnt-epoch (c/counter reg (conj tag "epoch"))
+        epoch-rate (m/meter reg  (conj tag "epoch-rate"))
         update-rv-epoch-fn (update-rv-epoch cnt-replica-version cnt-epoch epoch-rate)]
     {:onyx.core/monitoring (reduce 
                             (fn [mon lifecycle]
@@ -76,9 +70,9 @@
                                      lifecycle 
                                      (case lifecycle
                                        :lifecycle/unblock-subscribers update-rv-epoch-fn
-                                       :lifecycle/read-batch (new-read-batch reg job-name task-name id :lifecycle/read-batch) 
-                                       :lifecycle/write-batch (new-write-batch reg job-name task-name id :lifecycle/write-batch) 
-                                       (new-lifecycle-latency reg job-name task-name id lifecycle))))
+                                       :lifecycle/read-batch (new-read-batch reg tag :lifecycle/read-batch) 
+                                       :lifecycle/write-batch (new-write-batch reg tag :lifecycle/write-batch) 
+                                       (new-lifecycle-latency reg tag lifecycle))))
                             monitoring
                             lifecycles)}))
 
