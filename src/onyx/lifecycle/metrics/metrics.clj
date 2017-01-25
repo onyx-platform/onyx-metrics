@@ -18,7 +18,8 @@
       (.update timer latency-ns TimeUnit/NANOSECONDS))))
 
 (defn new-read-batch [reg job-name task-name id lifecycle]
-  (let [throughput (m/meter reg ["job" job-name "task" task-name (name lifecycle) "throughput"])
+  (let [throughput (m/meter reg ["job" job-name "task" task-name "peer-id" 
+                                 (str id) "task-lifecycle" (name lifecycle) "throughput"])
         timer ^com.codahale.metrics.Timer (t/timer reg ["job" job-name "task" task-name "peer-id" 
                                                         (str id) "task-lifecycle" 
                                                         (name lifecycle)])] 
