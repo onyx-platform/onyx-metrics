@@ -47,7 +47,6 @@
 (defn newrelic-sender [{:keys [newrelic/batch-size newrelic/batch-timeout newrelic/license-key]} ch shutdown?]
   (let [batch-size (or batch-size 50)
         batch-timeout (or batch-timeout 500)
-        timeout-count (atom 0)
         license-key (or (System/getenv "NEW_RELIC_LICENSE_KEY") 
                         license-key
                         (throw (Exception. "NewRelic license key must be supplied via the NEW_RELIC_LICENSE_KEY environment variable or :newrelic/license-key")))] 
@@ -56,11 +55,13 @@
                   (not @shutdown?)) 
         (let [events (read-batch ch batch-size batch-timeout)
               events-by-period (group-by (juxt :job-name :period) events)]
-          (when-not (empty? events) 
-            (loop [sleep 0]
+          (if (empty? events) 
+            (Thread/sleep batch-timeout)
+            (loop [timeout-count 0 
+                   sleep 0]
               ;; Exponential backoff to rate limit errors
               (when-not (zero? sleep) 
-                (info (format "Message send timeout count %s. Backing off %s." @timeout-count sleep))
+                (info (format "Message send timeout count %s. Backing off %s." timeout-count sleep))
                 (Thread/sleep sleep))
 
               (let [result (try
@@ -80,5 +81,4 @@
                               (warn-failure e events)
                               ::exception))]
                 (when (#{::exception} result)
-                  (swap! timeout-count inc)
-                  (recur (next-sleep-time sleep)))))))))))
+                  (recur (inc timeout-count) (next-sleep-time sleep)))))))))))
