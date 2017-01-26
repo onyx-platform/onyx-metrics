@@ -12,21 +12,6 @@
            [java.util.concurrent.atomic AtomicLong]
            [com.codahale.metrics Gauge]))
 
-(defprotocol IGauge
-  (setGauge [this value]))
-
-(deftype OGauge [value]
-  IGauge
-  (setGauge [this new-value]
-    (.set ^AtomicLong value ^long new-value))
-  Gauge
-  (getValue [this]
-    (.get ^AtomicLong value)))
-
-;(def v (->OGauge (AtomicLong.)))
-;(setGauge v 9933)
-;(.getValue v)
-
 (defn new-lifecycle-latency [reg tag lifecycle]
   (let [timer ^com.codahale.metrics.Timer (t/timer reg (into tag ["task-lifecycle" (name lifecycle)]))] 
     (fn [state latency-ns]
@@ -52,12 +37,11 @@
                                     0
                                     (:tree (:onyx.core/results (task/get-event state)))))))))
 
-(defn update-rv-epoch [cnt-replica-version cnt-epoch epoch-rate]
+(defn update-rv-epoch [^AtomicLong replica-version ^AtomicLong epoch epoch-rate]
   (fn [state latency-ns]
     (m/mark! epoch-rate 1)
-    (c/inc! cnt-replica-version (- (task/replica-version state) 
-                                   (c/value cnt-replica-version)))
-    (c/inc! cnt-epoch (- (task/epoch state) (c/value cnt-epoch)))))
+    (.set ^AtomicLong replica-version (task/replica-version state))
+    (.set ^AtomicLong epoch (task/epoch state))))
 
 ;; FIXME, close counters and remove them from the registry
 (defn before-task [{:keys [onyx.core/job-id onyx.core/id onyx.core/monitoring
@@ -77,10 +61,12 @@
         reg (:registry monitoring)
         _ (when-not reg (throw (Exception. "Monitoring component is not setup")))
         tag ["job" job-name "task" task-name "peer-id" (str id)]
-        cnt-replica-version (c/counter reg (conj tag "replica-version"))
-        cnt-epoch (c/counter reg (conj tag "epoch"))
+        replica-version (AtomicLong.)
+        epoch (AtomicLong.)
+        gg-replica-version (g/gauge-fn reg (conj tag "replica-version") (fn [] (.get ^AtomicLong replica-version)))
+        gg-epoch (g/gauge-fn reg (conj tag "epoch") (fn [] (.get ^AtomicLong epoch)))
         epoch-rate (m/meter reg  (conj tag "epoch-rate"))
-        update-rv-epoch-fn (update-rv-epoch cnt-replica-version cnt-epoch epoch-rate)]
+        update-rv-epoch-fn (update-rv-epoch replica-version epoch epoch-rate)]
     {:onyx.core/monitoring (reduce 
                             (fn [mon lifecycle]
                               (assoc mon 
@@ -95,4 +81,3 @@
 
 (def calls
   {:lifecycle/before-task-start before-task})
-
