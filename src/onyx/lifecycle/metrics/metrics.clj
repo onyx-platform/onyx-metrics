@@ -8,7 +8,24 @@
             [metrics.timers :as t]
             [metrics.gauges :as g]
             [metrics.meters :as m])
-  (:import [java.util.concurrent TimeUnit]))
+  (:import [java.util.concurrent TimeUnit]
+           [java.util.concurrent.atomic AtomicLong]
+           [com.codahale.metrics Gauge]))
+
+(defprotocol IGauge
+  (setGauge [this value]))
+
+(deftype OGauge [value]
+  IGauge
+  (setGauge [this new-value]
+    (.set ^AtomicLong value ^long new-value))
+  Gauge
+  (getValue [this]
+    (.get ^AtomicLong value)))
+
+;(def v (->OGauge (AtomicLong.)))
+;(setGauge v 9933)
+;(.getValue v)
 
 (defn new-lifecycle-latency [reg tag lifecycle]
   (let [timer ^com.codahale.metrics.Timer (t/timer reg (into tag ["task-lifecycle" (name lifecycle)]))] 
