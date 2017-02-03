@@ -9,6 +9,7 @@ metric endpoint.
 This repository will include configurations for dropwizard metrics [reporters](http://metrics.dropwizard.io/3.1.0/getting-started/#other-reporting) in the future.
 
 When developing locally, the quickest way to access metrics is to:
+
 1. run `jmc` (Java Mission Control) from your command line (Oracle Java JDK 1.8+ required).
 2. Select the correct running JVM in the left bar.
 3. Double click MBean Server.
