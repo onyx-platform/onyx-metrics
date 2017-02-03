@@ -7,7 +7,6 @@
             [gniazdo.core]
             [com.stuartsierra.component :as component]
             [taoensso.timbre :refer [info warn fatal]]
-            [onyx.lifecycle.metrics.metrics]
             [onyx.monitoring.events :as monitoring]
             [onyx.lifecycle.metrics.timbre]
             [onyx.lifecycle.metrics.riemann :as riemann]
@@ -109,9 +108,7 @@
                           :zookeeper.server/port 2188
                           :onyx/tenancy-id id}
               host-id (str (java.util.UUID/randomUUID))
-              monitoring-config (component/start (monitoring/new-monitoring))
               peer-config {:zookeeper/address "127.0.0.1:2188"
-                           :onyx.monitoring/config monitoring-config
                            :onyx/tenancy-id id
                            :onyx.peer/job-scheduler :onyx.job-scheduler/greedy
                            :onyx.messaging/impl :aeron
@@ -160,7 +157,6 @@
 
                   _ (doseq [n (range n-messages)]
                       (>!! @in-chan {:n n}))
-                  _ (close! @in-chan)
                   start-time (System/currentTimeMillis)
                   job (onyx.api/submit-job peer-config
                                            {:catalog catalog
@@ -168,9 +164,11 @@
                                             :workflow workflow
                                             :lifecycles lifecycles
                                             :task-scheduler :onyx.task-scheduler/balanced})
+                  _ (Thread/sleep 1000)
+                  _ (is (> (count (jmx/mbean-names "metrics:*")) 50))
+                  _ (close! @in-chan)
                   _ (onyx.test-helper/feedback-exception! peer-config (:job-id job))
                   results (take-segments! out-chan 50)
                   end-time (System/currentTimeMillis)]
               (let [expected (set (map (fn [x] {:n (inc x)}) (range n-messages)))]
-                (is (= expected (set results)))
-                (is (> (count (jmx/mbean-names "metrics:*")) 50))))))))))
+                (is (= expected (set results)))))))))))
