@@ -5,17 +5,20 @@
             [onyx.test-helper :refer [with-test-env add-test-env-peers!]]
             [riemann.client]
             [gniazdo.core]
+            [com.stuartsierra.component :as component]
             [taoensso.timbre :refer [info warn fatal]]
-            [onyx.lifecycle.metrics.metrics]
-            [onyx.lifecycle.metrics.timbre]
             [onyx.monitoring.events :as monitoring]
+            [onyx.lifecycle.metrics.timbre]
             [onyx.lifecycle.metrics.riemann :as riemann]
             [onyx.lifecycle.metrics.websocket]
+            [clojure.java.jmx :as jmx]
             [onyx.api]))
 
 (def n-messages 100000)
 
 (defn my-inc [{:keys [n] :as segment}]
+  ; (when (zero? (rand-int 100))
+  ;   (Thread/sleep 100))
   (assoc segment :n (inc n)))
 
 (def valid-tag-combos
@@ -69,12 +72,14 @@
                   ;:onyx.lifecycle.metrics.timbre/timbre-sender
                   :onyx.lifecycle.metrics.riemann/riemann-sender]] 
 
-    (def in-chan (chan (inc n-messages)))
+    (def in-chan (atom nil))
+    (def in-buffer (atom nil))
 
     (def out-chan (chan (sliding-buffer (inc n-messages))))
 
     (defn inject-in-ch [event lifecycle]
-      {:core.async/chan in-chan})
+      {:core.async/buffer in-buffer
+       :core.async/chan @in-chan})
 
     (defn inject-out-ch [event lifecycle]
       {:core.async/chan out-chan})
@@ -90,28 +95,24 @@
                     riemann.client/send-events (fn [_ events] 
                                                 (swap! events-atom into events)
                                                 (future :sent))
-                    ;taoensso.timbre/info (fn [& vs]
-                    ;                       (swap! events conj :print))
                     gniazdo.core/connect (fn [_])
                     gniazdo.core/send-msg (fn [_ v]
                                             (swap! events-atom conj v))] 
-        (let [id (java.util.UUID/randomUUID)
+        (let [_ (reset! in-buffer {})
+              _ (reset! in-chan (chan (inc n-messages)))
+              id (java.util.UUID/randomUUID)
               env-config {:zookeeper/address "127.0.0.1:2188"
                           :zookeeper/server? true
                           :zookeeper.server/port 2188
                           :onyx/tenancy-id id}
+              host-id (str (java.util.UUID/randomUUID))
               peer-config {:zookeeper/address "127.0.0.1:2188"
                            :onyx/tenancy-id id
                            :onyx.peer/job-scheduler :onyx.job-scheduler/greedy
                            :onyx.messaging/impl :aeron
                            :onyx.messaging/allow-short-circuit? false
                            :onyx.messaging/peer-port 40200
-                           :onyx.messaging/bind-addr "localhost"}
-              host-id (str (java.util.UUID/randomUUID))
-              monitoring-config (monitoring/monitoring-config 10000)
-              monitoring-thread (riemann/riemann-sender {:riemann/address "localhost" :riemann/port 12201} 
-                                                        (:monitoring/ch monitoring-config)
-                                                        (atom false))]
+                           :onyx.messaging/bind-addr "localhost"}]
           (with-test-env [test-env [3 env-config peer-config monitoring-config]]
             (let [batch-size 20
                   catalog [{:onyx/name :in
@@ -119,7 +120,6 @@
                             :onyx/type :input
                             :onyx/medium :core.async
                             :onyx/batch-size batch-size
-                            :onyx/max-pending 1000
                             :onyx/max-peers 1
                             :onyx/doc "Reads segments from a core.async channel"}
 
@@ -138,43 +138,35 @@
                   workflow [[:in :inc] [:inc :out]]
                   lifecycles [{:lifecycle/task :in
                                :lifecycle/calls ::in-calls}
-                              {:lifecycle/task :in
-                               :lifecycle/calls :onyx.plugin.core-async/reader-calls}
 
                               {:lifecycle/task :all
                                :lifecycle/calls :onyx.lifecycle.metrics.metrics/calls
-                               :websocket/address "ws://127.0.0.1:3000/metrics"
-                               :metrics/buffer-capacity 10000
+                               :metrics/lifecycles #{:lifecycle/apply-fn 
+                                                     :lifecycle/unblock-subscribers
+                                                     :lifecycle/write-batch
+                                                     :lifecycle/read-batch}
                                :riemann/address "localhost"
                                :riemann/port 12201
                                :metrics/sender-fn sender
                                :lifecycle/doc "Instruments a task's metrics"}
 
                               {:lifecycle/task :out
-                               :lifecycle/calls ::out-calls}
-                              {:lifecycle/task :out
-                               :lifecycle/calls :onyx.plugin.core-async/writer-calls}]
+                               :lifecycle/calls ::out-calls}]
 
                   _ (doseq [n (range n-messages)]
-                      (>!! in-chan {:n n}))
-                  _ (>!! in-chan :done)
-                  _ (close! in-chan)
+                      (>!! @in-chan {:n n}))
                   start-time (System/currentTimeMillis)
                   job (onyx.api/submit-job peer-config
-                                         {:catalog catalog
-                                          :metadata {:name "test-workflow"}
-                                          :workflow workflow
-                                          :lifecycles lifecycles
-                                          :task-scheduler :onyx.task-scheduler/balanced})
-                  results (take-segments! out-chan)
-                  _ (onyx.api/await-job-completion peer-config (:job-id job))
+                                           {:catalog catalog
+                                            :metadata {:name "test-workflow"}
+                                            :workflow workflow
+                                            :lifecycles lifecycles
+                                            :task-scheduler :onyx.task-scheduler/balanced})
+                  _ (Thread/sleep 1000)
+                  _ (is (> (count (jmx/mbean-names "metrics:*")) 50))
+                  _ (close! @in-chan)
+                  _ (onyx.test-helper/feedback-exception! peer-config (:job-id job))
+                  results (take-segments! out-chan 50)
                   end-time (System/currentTimeMillis)]
               (let [expected (set (map (fn [x] {:n (inc x)}) (range n-messages)))]
-                (is (= expected (set (butlast results))))
-                (is (= :done (last results)))
-                (is (= valid-tag-combos (set (map (comp vec butlast :tags) @events-atom))))
-                (is (nil? (some #(not (instance? java.lang.String %)) (mapcat :tags @events-atom))))
-                (is (> (count @events-atom) (* 3 ; number of tasks
-                                               (/ (- end-time start-time) 1000)
-                                               ;; only approximate because of brittle test on CI
-                                               3)))))))))))
+                (is (= expected (set results)))))))))))
