@@ -11,7 +11,7 @@
                              :username :env
                              :password :env
                              :sign-releases false}}
-  :dependencies [[org.onyxplatform/onyx "0.13.1-20180528_175905-g347e859"]
+  :dependencies [[org.onyxplatform/onyx "0.13.1-20180704_000059-g89e4291"]
                  ^{:voom {:repo "git@github.com:onyx-platform/onyx.git" :branch "master"}}
                  [org.clojure/clojure "1.8.0"]
                  [metrics-clojure "2.8.0"]]
